@@ -1,25 +1,30 @@
 import SwiftUI
 import SwiftData
 import CoreModels
+import AuthService
 
 /// Auth durumuna göre root switch.
-/// Faz 2'de gerçek auth state takibi eklenecek; şu an her zaman onboarding.
 struct AppRoot: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var players: [Player]
+    @Environment(AuthController.self) private var authController
 
     var body: some View {
         Group {
-            if players.first != nil {
+            switch authController.phase {
+            case .signedIn:
                 HomeView()
-            } else {
+            case .signingIn, .idle, .revoked, .error:
                 OnboardingView()
             }
+        }
+        .task {
+            await authController.bootstrap(modelContext: modelContext)
         }
     }
 }
 
 #Preview {
     AppRoot()
+        .environment(AuthController())
         .modelContainer(for: [Player.self, Match.self, Round.self], inMemory: true)
 }

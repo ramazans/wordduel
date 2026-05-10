@@ -14,15 +14,11 @@ public actor MatchSyncService {
     }
 
     private let container: CKContainer
+    public let account: CloudKitAccount
 
     public init(containerIdentifier: String) {
         self.container = CKContainer(identifier: containerIdentifier)
-    }
-
-    // MARK: - Account
-
-    public func accountStatus() async throws -> CKAccountStatus {
-        try await container.accountStatus()
+        self.account = CloudKitAccount(containerIdentifier: containerIdentifier)
     }
 
     // MARK: - Match creation (Faz 4)

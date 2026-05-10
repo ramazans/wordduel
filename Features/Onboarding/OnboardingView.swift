@@ -1,8 +1,14 @@
 import SwiftUI
+import SwiftData
 import AuthenticationServices
+import AuthService
+import CloudKitService
 import DesignSystem
 
 struct OnboardingView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(AuthController.self) private var authController
+    @State private var viewModel: SignInViewModel?
     @State private var page = 0
 
     var body: some View {
@@ -32,14 +38,51 @@ struct OnboardingView: View {
             .tabViewStyle(.page)
             .indexViewStyle(.page(backgroundDisplayMode: .always))
 
-            SignInWithAppleButton(.signIn) { request in
-                request.requestedScopes = [.fullName]
-            } onCompletion: { _ in
-                // TODO Faz 2: AuthService köprüsü.
+            footer
+        }
+        .task {
+            if viewModel == nil {
+                viewModel = SignInViewModel(
+                    authController: authController,
+                    cloudKitAccount: CloudKitAccount(containerIdentifier: AppConstants.cloudKitContainerID)
+                )
             }
-            .signInWithAppleButtonStyle(.black)
-            .frame(height: 50)
-            .padding()
+            await viewModel?.refreshCloudKitAvailability()
+        }
+    }
+
+    @ViewBuilder
+    private var footer: some View {
+        if let vm = viewModel, !vm.iCloudAvailability.isAvailable {
+            ContentUnavailableView {
+                Label("iCloud kullanılamıyor", systemImage: "exclamationmark.icloud")
+            } description: {
+                Text(vm.iCloudAvailability.userMessage)
+            }
+            .padding(.bottom)
+        }
+
+        SignInWithAppleButton(.signIn) { request in
+            request.requestedScopes = [.fullName]
+        } onCompletion: { result in
+            viewModel?.handleAppleSignIn(result, modelContext: modelContext)
+        }
+        .signInWithAppleButtonStyle(.black)
+        .frame(height: 50)
+        .disabled(viewModel?.iCloudAvailability.isAvailable != true)
+        .padding()
+
+        if case .signingIn = authController.phase {
+            ProgressView()
+                .padding(.bottom)
+        }
+
+        if case .error(let message) = authController.phase {
+            Text(message)
+                .font(.wdCaption)
+                .foregroundStyle(.red)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
         }
     }
 
@@ -64,4 +107,5 @@ struct OnboardingView: View {
 
 #Preview {
     OnboardingView()
+        .environment(AuthController())
 }
