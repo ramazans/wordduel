@@ -5,6 +5,7 @@ import AuthService
 
 @main
 struct WordDuelApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     private let container: ModelContainer
     @State private var authController = AuthController(
         storageKey: AppConstants.appleUserIDStorageKey
@@ -26,6 +27,12 @@ struct WordDuelApp: App {
             AppRoot()
                 .environment(authController)
                 .environment(services)
+                .task {
+                    appDelegate.pushSink = { outcome in
+                        Task { @MainActor in services.handlePushOutcome(outcome) }
+                    }
+                    await services.bootstrap()
+                }
         }
         .modelContainer(container)
     }
