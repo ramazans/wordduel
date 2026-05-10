@@ -124,7 +124,7 @@ public actor MatchSyncService {
 
         let share = CKShare(recordZoneID: zoneID)
         share[CKShare.SystemFieldKey.title] = "WordDuel \(code)" as NSString
-        share[CKShare.SystemFieldKey.shareType] = "com.example.wordduel.match" as NSString
+        share[CKShare.SystemFieldKey.shareType] = "club.kadro.wordduel.match" as NSString
         share.publicPermission = .readWrite
 
         do {

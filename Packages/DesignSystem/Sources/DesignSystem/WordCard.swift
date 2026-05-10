@@ -15,11 +15,12 @@ public struct WordCard: View {
         VStack(spacing: 12) {
             if isRepeat {
                 Label("Tekrar", systemImage: "arrow.clockwise")
-                    .font(.wdCaption)
+                    .font(.caption)
                     .foregroundStyle(.orange)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .background(.orange.opacity(0.15), in: Capsule())
+                    .accessibilityLabel("Tekrar sorulan kelime")
             }
 
             Text(word)
@@ -27,10 +28,15 @@ public struct WordCard: View {
                 .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.5)
                 .lineLimit(2)
+                .id(word)
+                .transition(.asymmetric(
+                    insertion: .scale(scale: 0.85).combined(with: .opacity),
+                    removal: .opacity
+                ))
 
             if let hint, !hint.isEmpty {
                 Text(hint)
-                    .font(.wdCaption)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -42,7 +48,18 @@ public struct WordCard: View {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Color.wdSeparator, lineWidth: 0.5)
         }
+        .animation(.spring(duration: 0.5), value: word)
         .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isStaticText)
+        .accessibilityLabel(accessibilityLabelText)
+    }
+
+    private var accessibilityLabelText: String {
+        var parts: [String] = []
+        if isRepeat { parts.append("Tekrar sorulan kelime") }
+        parts.append("Kelime: \(word)")
+        if let hint, !hint.isEmpty { parts.append("Seviye: \(hint)") }
+        return parts.joined(separator: ", ")
     }
 }
 

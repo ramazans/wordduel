@@ -14,14 +14,9 @@ public enum PushNotificationHandler {
         guard let notification = CKNotification(fromRemoteNotificationDictionary: userInfo) else {
             return .ignored
         }
-        guard notification.notificationType == .database else {
-            return .ignored
+        if let dbNotification = notification as? CKDatabaseNotification {
+            return .databaseChanged(scope: dbNotification.databaseScope)
         }
-        let scope: CKDatabase.Scope
-        switch notification.containerIdentifier {
-        default:
-            scope = (notification as? CKDatabaseNotification)?.databaseScope ?? .private
-        }
-        return .databaseChanged(scope: scope)
+        return .ignored
     }
 }

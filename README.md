@@ -84,7 +84,56 @@ yarat, sonra Dashboard'dan production'a deploy et.
 - Push Notifications
 - Background Modes → Remote notifications
 
-## Plan
+## App Store Deployment Checklist (Faz 6)
+
+### Xcode Setup
+- [ ] Bundle ID: `club.kadro.wordduel` (Constants.swift + xcconfig'te ayarlı)
+- [ ] CloudKit Container: `iCloud.club.kadro.wordduel`
+- [ ] Signing & Capabilities → Sign in with Apple
+- [ ] Signing & Capabilities → iCloud → CloudKit checkbox + container seç
+- [ ] Signing & Capabilities → Push Notifications
+- [ ] Signing & Capabilities → Background Modes → Remote notifications
+- [ ] App'e `App/PrivacyInfo.xcprivacy` ekle (target membership: app)
+
+### App Store Connect
+- [ ] App Store Connect → My Apps → New App: Bundle ID + SKU + name
+- [ ] App Information → Category: Games → Word
+- [ ] Pricing: Free
+- [ ] App Privacy → "Data Collection" anketini doldur (Player ID, gameplay content — linked to identity, not for tracking)
+- [ ] Age Rating: 4+
+- [ ] App Review Information: contact, demo Apple ID gerekirse
+
+### Assets
+- [ ] App Icon 1024×1024 (Asset Catalog)
+- [ ] Screenshots: iPhone 6.7" + iPhone 6.5" + iPad 13" (Light + Dark birer set)
+- [ ] App preview video (opsiyonel ama önerilir)
+- [ ] Marketing URL (opsiyonel)
+- [ ] Support URL (zorunlu)
+- [ ] Privacy Policy URL (Sign in with Apple zorunlu kılıyor)
+
+### Localization (App Store)
+- [ ] Türkçe açıklama, keywords (`kelime, ezberleme, ingilizce, oyun, yarışma`)
+- [ ] English description + keywords (`vocabulary, english, learn, duel, game`)
+
+### CloudKit Production
+- [ ] CloudKit Dashboard → Schema'yı **Development → Production** deploy et
+- [ ] `MatchInvite` record type'ı manuel oluştur (`code` field Queryable + Sortable)
+
+### Beta
+- [ ] Internal TestFlight: kendi cihazlarınla test
+- [ ] External TestFlight: arkadaşlarla beta (Apple Review gerekir, 1-2 gün)
+
+### Pre-submit
+- [ ] Accessibility Inspector → her ekran VoiceOver ile gezilebilir
+- [ ] Dynamic Type XXL'de UI taşması yok
+- [ ] Light + Dark mode parity
+- [ ] Lokalizasyon: TR ve EN dillerinde tüm akış denenmiş
+
+### Submit
+- [ ] Xcode → Archive → Validate → Upload
+- [ ] App Store Connect → Submit for Review
+
+
 
 Detaylı geliştirme planı için bkz. proje belgeleri (6 fazlı, ~4-6 hafta tek geliştirici tahmini).
 
