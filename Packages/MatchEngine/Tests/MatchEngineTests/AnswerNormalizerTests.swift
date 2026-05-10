@@ -34,7 +34,7 @@ final class AnswerNormalizerTests: XCTestCase {
     }
 
     func testStudiedVsStudyIsNotCorrect() {
-        // Plan: "studied" ↔ "study" — distance 4, NOT auto-correct
+        // "studied" vs "study" — distance 3, length 5 → tolerance 1 → not auto-correct
         XCTAssertNotEqual(
             AnswerNormalizer.autoJudge(answer: "studied", expected: "study"),
             .correct
