@@ -3,6 +3,7 @@ import DesignSystem
 
 struct InviteView: View {
     let code: String
+    var onDismiss: () -> Void = {}
 
     var body: some View {
         NavigationStack {
@@ -16,6 +17,7 @@ struct InviteView: View {
                     .padding(.horizontal, 32)
                     .padding(.vertical, 24)
                     .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    .accessibilityLabel("Davet kodu \(code.map { String($0) }.joined(separator: " "))")
 
                 HStack(spacing: 12) {
                     Button {
@@ -34,14 +36,21 @@ struct InviteView: View {
                 }
                 .controlSize(.large)
                 .padding(.horizontal)
+
+                Spacer()
             }
             .padding()
             .navigationTitle("Arkadaş Davet Et")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Kapat", action: onDismiss)
+                }
+            }
         }
     }
 }
 
 #Preview {
-    InviteView(code: "ABC123")
+    InviteView(code: "AB23K9")
 }

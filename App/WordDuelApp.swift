@@ -9,6 +9,9 @@ struct WordDuelApp: App {
     @State private var authController = AuthController(
         storageKey: AppConstants.appleUserIDStorageKey
     )
+    @State private var services = AppServices(
+        cloudKitContainerID: AppConstants.cloudKitContainerID
+    )
 
     init() {
         do {
@@ -22,6 +25,7 @@ struct WordDuelApp: App {
         WindowGroup {
             AppRoot()
                 .environment(authController)
+                .environment(services)
         }
         .modelContainer(container)
     }

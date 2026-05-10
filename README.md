@@ -54,6 +54,36 @@ cd Packages/MatchEngine
 swift test
 ```
 
+## CloudKit Schema (Manual Setup on Mac)
+
+Faz 4 için CloudKit Dashboard → Development environment'ta şu record type'ları schema olarak deploy edilmeli (SwiftData @Model'lar otomatik üretir, ama public DB'deki `MatchInvite` manuel):
+
+### Public DB — `MatchInvite`
+
+| Field | Type | Indexed | Notes |
+|---|---|---|---|
+| `code` | String | Queryable + Searchable | 6-char, unique within fresh window |
+| `shareURL` | String | — | iCloud share URL |
+| `hostUserRecordName` | String | — | CKCurrentUser record name |
+| `createdAt` | Date/Time | Sortable | |
+| `expiresAt` | Date/Time | — | TTL — 7 gün varsayılan |
+
+> **Önemli**: `MatchInvite` kodları opaque shareURL'i lookup edilebilir hale getirir.
+> Kayıt içeriği yalnızca paylaşım meta verisidir; oyun verisi (kelime, skor) burada yok.
+
+### Private DB — SwiftData @Model'lar
+
+`Player`, `Match`, `Round`, `WordEntry`, `ScoreEvent` SwiftData tarafından otomatik
+oluşturulur. Schema deployment için bir kez uygulamayı simulator'de çalıştırıp Match
+yarat, sonra Dashboard'dan production'a deploy et.
+
+### Capabilities (Xcode)
+
+- Sign in with Apple
+- iCloud → CloudKit container `iCloud.com.<team>.wordduel`
+- Push Notifications
+- Background Modes → Remote notifications
+
 ## Plan
 
 Detaylı geliştirme planı için bkz. proje belgeleri (6 fazlı, ~4-6 hafta tek geliştirici tahmini).
