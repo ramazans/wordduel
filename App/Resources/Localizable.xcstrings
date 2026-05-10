@@ -1,0 +1,321 @@
+{
+  "sourceLanguage" : "en",
+  "version" : "1.0",
+  "strings" : {
+    "app.name" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "WordDuel" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "WordDuel" } }
+      }
+    },
+    "onboarding.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Welcome to WordDuel" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "WordDuel'e Hoş Geldin" } }
+      }
+    },
+    "onboarding.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Test your friend's English vocabulary in real time." } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Arkadaşının İngilizce kelime bilgisini gerçek zamanlı test et." } }
+      }
+    },
+    "onboarding.signIn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sign in with Apple" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Apple ile Giriş Yap" } }
+      }
+    },
+    "home.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Matches" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Maçlar" } }
+      }
+    },
+    "home.section.active" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Active" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Aktif" } }
+      }
+    },
+    "home.section.invites" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Invites" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Davetler" } }
+      }
+    },
+    "home.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No matches yet" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Henüz maç yok" } }
+      }
+    },
+    "home.empty.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Start a new match or join with a code." } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Yeni maç başlat veya kodla katıl." } }
+      }
+    },
+    "home.menu.newMatch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "New Match" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Yeni Maç" } }
+      }
+    },
+    "home.menu.joinByCode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Join by Code" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Kodla Katıl" } }
+      }
+    },
+    "home.menu.profile" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Profile" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Profil" } }
+      }
+    },
+    "invite.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Invite a Friend" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Arkadaş Davet Et" } }
+      }
+    },
+    "invite.codeHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Share this code with your friend" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Bu kodu arkadaşınla paylaş" } }
+      }
+    },
+    "invite.copy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Kopyala" } }
+      }
+    },
+    "invite.share" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Share" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Paylaş" } }
+      }
+    },
+    "join.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Join by Code" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Kodla Katıl" } }
+      }
+    },
+    "join.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "6-digit code" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "6 haneli kod" } }
+      }
+    },
+    "join.action" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Join" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Katıl" } }
+      }
+    },
+    "match.roundOf" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Round %1$d / %2$d" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Tur %1$d / %2$d" } }
+      }
+    },
+    "match.askMode.list" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "From list" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Listeden seç" } }
+      }
+    },
+    "match.askMode.custom" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Write your own" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Kendin yaz" } }
+      }
+    },
+    "match.answer.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Translation" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Türkçe karşılık" } }
+      }
+    },
+    "match.answer.submit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Submit" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Gönder" } }
+      }
+    },
+    "match.timeLeft" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : { "stringUnit" : { "state" : "translated", "value" : "%d second left" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%d seconds left" } }
+            }
+          }
+        },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "%d sn kaldı" } }
+      }
+    },
+    "match.roundsLeft" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : { "stringUnit" : { "state" : "translated", "value" : "%d round left" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%d rounds left" } }
+            }
+          }
+        },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "%d tur kaldı" } }
+      }
+    },
+    "match.youAsker" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your turn to ask" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Sıra sende: kelime sor" } }
+      }
+    },
+    "match.youAnswerer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your turn to answer" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Sıra sende: cevap ver" } }
+      }
+    },
+    "match.creating" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Creating match…" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Maç oluşturuluyor…" } }
+      }
+    },
+    "notification.turn.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your turn" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Sıra sende" } }
+      }
+    },
+    "notification.turn.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%1$@ asked a word. Match %2$@." } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "%1$@ bir kelime sordu. Maç %2$@." } }
+      }
+    },
+    "review.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Review Answer" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Cevabı Değerlendir" } }
+      }
+    },
+    "review.accept" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Accept" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Doğru say" } }
+      }
+    },
+    "review.reject" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Reject" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Yanlış say" } }
+      }
+    },
+    "score.gained" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "+%d points" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "+%d puan" } }
+      }
+    },
+    "result.playAgain" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Play Again" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Tekrar Oyna" } }
+      }
+    },
+    "result.home" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Home" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Ana Ekran" } }
+      }
+    },
+    "settings.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Ayarlar" } }
+      }
+    },
+    "settings.language" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Language" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Dil" } }
+      }
+    },
+    "settings.notifications" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Notifications" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Bildirimler" } }
+      }
+    },
+    "settings.deleteAccount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete Account" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Hesabı Sil" } }
+      }
+    },
+    "icloud.unavailable.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "iCloud is not available" } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "iCloud kullanılamıyor" } }
+      }
+    },
+    "icloud.unavailable.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sign in to iCloud in Settings to play with friends." } },
+        "tr" : { "stringUnit" : { "state" : "translated", "value" : "Arkadaşlarla oynamak için Ayarlar'dan iCloud'a giriş yap." } }
+      }
+    }
+  }
+}
