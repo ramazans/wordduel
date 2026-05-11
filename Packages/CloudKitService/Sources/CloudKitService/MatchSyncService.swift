@@ -71,10 +71,10 @@ public actor MatchSyncService {
         // share URL alınabilir; aşağıdaki yardımcı bunu CKContainer.share API'si
         // ile yapar. Mac/cihazda gerçek senkronizasyon doğrulandıktan sonra
         // SwiftData-bridge çözümüne taşınmalı.
-        let (share, _) = try await prepareShare(forMatchCode: code)
+        let share = try await prepareShare(forMatchCode: code)
 
         guard let shareURL = share.url else {
-            throw SyncError.shareCreationFailed("Share URL not yet provisioned")
+            throw SyncError.shareCreationFailed("Server saved share but URL is still nil")
         }
 
         let userRecordID = try await container.userRecordID()
@@ -99,7 +99,7 @@ public actor MatchSyncService {
     /// destekleniyor. Burada şablon şu an `CKShare(recordZoneID:)` ile zone-level paylaşım
     /// üretiyor; Mac'te SwiftData'nın expose ettiği `CKContainer.share(rootRecord:)`
     /// API'si ile değiştirilmeli.
-    private func prepareShare(forMatchCode code: String) async throws -> (CKShare, CKContainer) {
+    private func prepareShare(forMatchCode code: String) async throws -> CKShare {
         let zoneID = CKRecordZone.ID(zoneName: "WordDuelMatches", ownerName: CKCurrentUserDefaultName)
 
         do {
@@ -115,8 +115,9 @@ public actor MatchSyncService {
         share[CKShare.SystemFieldKey.shareType] = "club.kadro.wordduel.match" as NSString
         share.publicPermission = .readWrite
 
+        let result: (saveResults: [CKRecord.ID: Result<CKRecord, Error>], deleteResults: [CKRecord.ID: Result<Void, Error>])
         do {
-            _ = try await container.privateCloudDatabase.modifyRecords(
+            result = try await container.privateCloudDatabase.modifyRecords(
                 saving: [share],
                 deleting: [],
                 savePolicy: .changedKeys
@@ -125,7 +126,20 @@ public actor MatchSyncService {
             throw SyncError.shareCreationFailed(error.localizedDescription)
         }
 
-        return (share, container)
+        // Server-returned CKShare; bunun `.url`'i populated olur.
+        guard let saveResult = result.saveResults[share.recordID] else {
+            throw SyncError.shareCreationFailed("No save result for CKShare")
+        }
+        let savedRecord: CKRecord
+        do {
+            savedRecord = try saveResult.get()
+        } catch {
+            throw SyncError.shareCreationFailed(error.localizedDescription)
+        }
+        guard let savedShare = savedRecord as? CKShare else {
+            throw SyncError.shareCreationFailed("Saved record is not a CKShare")
+        }
+        return savedShare
     }
 
     // MARK: - Accept
