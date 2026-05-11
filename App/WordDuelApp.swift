@@ -11,11 +11,20 @@ struct WordDuelApp: App {
         storageKey: AppConstants.appleUserIDStorageKey
     )
     @State private var services = AppServices(
-        cloudKitContainerID: AppConstants.cloudKitContainerID
+        cloudKitContainerID: AppConstants.cloudKitContainerID,
+        cloudKitEnabled: AppConstants.cloudKitEnabled
     )
 
     init() {
-        container = SchemaContainer.makeResilientContainer()
+        if AppConstants.cloudKitEnabled {
+            container = SchemaContainer.makeResilientContainer()
+        } else {
+            do {
+                container = try SchemaContainer.makeContainer(cloudKit: false)
+            } catch {
+                container = SchemaContainer.makeResilientContainer()
+            }
+        }
     }
 
     var body: some Scene {

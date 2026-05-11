@@ -8,6 +8,7 @@ import DesignSystem
 struct OnboardingView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AuthController.self) private var authController
+    @Environment(AppServices.self) private var services
     @State private var viewModel: SignInViewModel?
     @State private var page = 0
 
@@ -47,7 +48,10 @@ struct OnboardingView: View {
                     cloudKitAccount: CloudKitAccount(containerIdentifier: AppConstants.cloudKitContainerID)
                 )
             }
-            await viewModel?.refreshCloudKitAvailability()
+            // CloudKit container kayıtlı değilse log spam'i engellemek için skip et.
+            if services.cloudKitEnabled {
+                await viewModel?.refreshCloudKitAvailability()
+            }
         }
     }
 
