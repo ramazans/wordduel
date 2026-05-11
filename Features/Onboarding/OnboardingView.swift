@@ -53,13 +53,10 @@ struct OnboardingView: View {
 
     @ViewBuilder
     private var footer: some View {
-        if let vm = viewModel, !vm.iCloudAvailability.isAvailable {
-            ContentUnavailableView {
-                Label("iCloud kullanılamıyor", systemImage: "exclamationmark.icloud")
-            } description: {
-                Text(vm.iCloudAvailability.userMessage)
-            }
-            .padding(.bottom)
+        if let vm = viewModel,
+           !vm.iCloudAvailability.isAvailable,
+           vm.iCloudAvailability != .couldNotDetermine {
+            iCloudWarning(vm.iCloudAvailability)
         }
 
         SignInWithAppleButton(.signIn) { request in
@@ -69,7 +66,6 @@ struct OnboardingView: View {
         }
         .signInWithAppleButtonStyle(.black)
         .frame(height: 50)
-        .disabled(viewModel?.iCloudAvailability.isAvailable != true)
         .padding()
 
         if case .signingIn = authController.phase {
@@ -84,6 +80,21 @@ struct OnboardingView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
         }
+    }
+
+    @ViewBuilder
+    private func iCloudWarning(_ availability: CloudKitAccount.Availability) -> some View {
+        VStack(spacing: 6) {
+            Label("iCloud kullanılamıyor", systemImage: "exclamationmark.icloud")
+                .font(.wdCaption)
+                .foregroundStyle(.orange)
+            Text(availability.userMessage)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+        }
+        .padding(.bottom, 4)
     }
 
     @ViewBuilder
