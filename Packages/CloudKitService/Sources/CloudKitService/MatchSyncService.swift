@@ -1,7 +1,5 @@
 import Foundation
 import CloudKit
-import SwiftData
-import CoreModels
 
 /// Maç oluşturma, davet kodu üretimi, CKShare yönetimi ve "kodla katıl" akışı.
 ///
@@ -24,10 +22,10 @@ public actor MatchSyncService {
         case underlying(String)
     }
 
-    public struct CreatedMatch: Sendable {
+    public struct NewMatchProvisioning: Sendable {
         public let code: String
         public let shareURL: URL
-        public let matchPersistentID: PersistentIdentifier
+        public let hostUserRecordName: String
     }
 
     public struct AcceptedMatchInfo: Sendable {
@@ -48,41 +46,31 @@ public actor MatchSyncService {
         self.inviteRepository = InviteRepository(container: container)
     }
 
-    // MARK: - Create
+    // MARK: - Provision
 
-    /// Yeni bir maç oluşturur. Akış:
+    /// Yeni bir maç için CloudKit tarafını hazırlar. Sadece CloudKit işleri:
     ///   1. Hesap durumu kontrol
-    ///   2. Match kaydı SwiftData'ya yazılır
-    ///   3. SwiftData private DB'ye senkronize olduğu varsayılır
-    ///   4. Match'in CKRecord karşılığına CKShare üretilir
-    ///   5. Public DB'ye MatchInvite yazılır
-    ///   6. Share URL döndürülür
-    public func createMatch(
-        host: Player,
-        modelContext: ModelContext
-    ) async throws -> CreatedMatch {
+    ///   2. Davet kodu üret
+    ///   3. Private zone'da CKShare oluştur
+    ///   4. Public DB'ye `MatchInvite` yaz
+    ///   5. Provisioning bilgisini döndür
+    ///
+    /// SwiftData `Match` kaydı caller tarafında (`@MainActor` view model)
+    /// `code` ile birlikte oluşturulur — `ModelContext` actor'a geçmediği için
+    /// Swift 6 strict concurrency uyumlu.
+    public func provisionMatch() async throws -> NewMatchProvisioning {
         let availability = await account.availability()
         guard availability.isAvailable else {
             throw SyncError.accountUnavailable
         }
 
         let code = MatchCodeGenerator.generate()
-        let match = Match(code: code, host: host)
-
-        await MainActor.run {
-            modelContext.insert(match)
-        }
-        do {
-            try await MainActor.run { try modelContext.save() }
-        } catch {
-            throw SyncError.matchPersistenceFailed(error.localizedDescription)
-        }
 
         // CKShare yaratma — gerçek implementasyon SwiftData'nın altındaki
         // CKRecord'a erişim gerektirir. iOS 18'de `ModelContainer` üzerinden
         // share URL alınabilir; aşağıdaki yardımcı bunu CKContainer.share API'si
-        // ile yapar. Şu anda Mac/cihazda gerçek senkronizasyon doğrulandıktan
-        // sonra bağlanmalı.
+        // ile yapar. Mac/cihazda gerçek senkronizasyon doğrulandıktan sonra
+        // SwiftData-bridge çözümüne taşınmalı.
         let (share, _) = try await prepareShare(forMatchCode: code)
 
         guard let shareURL = share.url else {
@@ -97,10 +85,10 @@ public actor MatchSyncService {
         )
         try await inviteRepository.write(invite)
 
-        return CreatedMatch(
+        return NewMatchProvisioning(
             code: code,
             shareURL: shareURL,
-            matchPersistentID: match.persistentModelID
+            hostUserRecordName: userRecordID.recordName
         )
     }
 
