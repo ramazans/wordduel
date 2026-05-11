@@ -43,7 +43,35 @@ wordduel/
 
 ## Geliştirme
 
-Xcode 16+ ve iOS 18 SDK gerekir. Repo'yu klonladıktan sonra Mac'te `wordduel.xcodeproj` açılır (proje dosyası ilk kurulumda manuel olarak veya XcodeGen ile üretilir).
+Xcode 16+ ve iOS 18 SDK gerekir.
+
+### Xcode projesini üretme (XcodeGen)
+
+`.xcodeproj` repo'da yok — `project.yml`'den XcodeGen ile üretiliyor. İlk kurulumda:
+
+```bash
+# XcodeGen yüklü değilse:
+brew install xcodegen
+
+# Repo kökünde:
+xcodegen generate
+
+# Sonra:
+open WordDuel.xcodeproj
+```
+
+`project.yml` değiştirildiğinde `xcodegen generate` ile yeniden üret. Üretilen `.xcodeproj` `.gitignore`'da, asla commit'lenmez.
+
+### Xcode'da yapılması gerekenler (ilk açılışta)
+
+1. Signing & Capabilities → **Team** seç (Apple Developer hesabın)
+2. Capabilities şu an entitlements'tan geliyor — eksik bir şey görürsen Xcode "Fix" sunar:
+   - Sign in with Apple
+   - iCloud → CloudKit (container: `iCloud.club.kadro.wordduel`)
+   - Push Notifications
+   - Background Modes → Remote notifications
+3. CloudKit Dashboard'da container yoksa oluştur (`iCloud.club.kadro.wordduel`)
+4. App Icon ekle (`Assets.xcassets/AppIcon.appiconset/`) — 1024×1024 PNG
 
 ### MatchEngine'i CLI'da test etmek
 

@@ -1,0 +1,115 @@
+name: WordDuel
+
+options:
+  bundleIdPrefix: club.kadro
+  deploymentTarget:
+    iOS: "18.0"
+  developmentLanguage: en
+  xcodeVersion: "16.0"
+  groupSortPosition: top
+  createIntermediateGroups: true
+  generateEmptyDirectories: false
+
+configs:
+  Debug: debug
+  Release: release
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    CODE_SIGN_STYLE: Automatic
+  configs:
+    Debug:
+      SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+      SWIFT_COMPILATION_MODE: singlefile
+      GCC_OPTIMIZATION_LEVEL: "0"
+    Release:
+      SWIFT_OPTIMIZATION_LEVEL: "-O"
+      SWIFT_COMPILATION_MODE: wholemodule
+      GCC_OPTIMIZATION_LEVEL: "s"
+
+packages:
+  DesignSystem:
+    path: Packages/DesignSystem
+  CoreModels:
+    path: Packages/CoreModels
+  CloudKitService:
+    path: Packages/CloudKitService
+  AuthService:
+    path: Packages/AuthService
+  MatchEngine:
+    path: Packages/MatchEngine
+  WordRepository:
+    path: Packages/WordRepository
+  L10n:
+    path: Packages/L10n
+
+targets:
+  WordDuel:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: App
+        excludes:
+          - "Info.plist"
+          - "wordduel.entitlements"
+      - path: Features
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: club.kadro.wordduel
+        PRODUCT_NAME: WordDuel
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: App/Info.plist
+        CODE_SIGN_ENTITLEMENTS: App/wordduel.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        SUPPORTS_MACCATALYST: NO
+    dependencies:
+      - package: DesignSystem
+      - package: CoreModels
+      - package: CloudKitService
+      - package: AuthService
+      - package: MatchEngine
+      - package: WordRepository
+      - package: L10n
+
+  WordDuelUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Tests/UITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: club.kadro.wordduel.uitests
+        TARGETED_DEVICE_FAMILY: "1,2"
+        TEST_TARGET_NAME: WordDuel
+    dependencies:
+      - target: WordDuel
+
+schemes:
+  WordDuel:
+    build:
+      targets:
+        WordDuel: all
+        WordDuelUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - WordDuelUITests
+      gatherCoverageData: true
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
