@@ -3,12 +3,12 @@ import SwiftData
 
 @Model
 public final class ScoreEvent {
-    public var matchID: String
-    public var roundIndex: Int
-    public var playerID: String
-    public var delta: Int
-    public var reasonRaw: String
-    public var createdAt: Date
+    public var matchID: String = ""
+    public var roundIndex: Int = 0
+    public var playerID: String = ""
+    public var delta: Int = 0
+    public var reasonRaw: String = "autoCorrect"
+    public var createdAt: Date = Date()
 
     public var reason: ScoreReason {
         get { ScoreReason(rawValue: reasonRaw) ?? .autoCorrect }

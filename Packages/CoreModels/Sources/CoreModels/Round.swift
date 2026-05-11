@@ -3,14 +3,14 @@ import SwiftData
 
 @Model
 public final class Round {
-    public var index: Int
-    public var askerRoleRaw: String
-    public var word: String
-    public var expectedAnswer: String
+    public var index: Int = 0
+    public var askerRoleRaw: String = "host"
+    public var word: String = ""
+    public var expectedAnswer: String = ""
     public var answerGiven: String?
-    public var judgementRaw: String
-    public var pointsAwarded: Int
-    public var isRepeat: Bool
+    public var judgementRaw: String = "pendingReview"
+    public var pointsAwarded: Int = 0
+    public var isRepeat: Bool = false
     public var originRoundIndex: Int?
     public var startedAt: Date?
     public var resolvedAt: Date?
