@@ -100,16 +100,38 @@ public actor MatchSyncService {
     /// üretiyor; Mac'te SwiftData'nın expose ettiği `CKContainer.share(rootRecord:)`
     /// API'si ile değiştirilmeli.
     private func prepareShare(forMatchCode code: String) async throws -> CKShare {
-        let zoneID = CKRecordZone.ID(zoneName: "WordDuelMatches", ownerName: CKCurrentUserDefaultName)
+        // Maç başına unique zone — bir zone'da en fazla bir CKShare olur,
+        // bu yüzden farklı maçların aynı zone'u paylaşması "already exists"
+        // hatası verir. Zone adı kodla deterministik.
+        let zoneID = CKRecordZone.ID(zoneName: "match-\(code)", ownerName: CKCurrentUserDefaultName)
+        let db = container.privateCloudDatabase
 
+        // Zone yarat (varsa hatayı yut)
         do {
-            _ = try await container.privateCloudDatabase.save(CKRecordZone(zoneID: zoneID))
+            _ = try await db.save(CKRecordZone(zoneID: zoneID))
         } catch let error as CKError where error.code == .serverRecordChanged {
             // zone zaten varsa OK
+        } catch let error as CKError where error.code == .zoneNotFound {
+            // henüz yaratılmamış; modifyRecordZones ile yaratmayı dene
+            _ = try await db.modifyRecordZones(saving: [CKRecordZone(zoneID: zoneID)], deleting: [])
         } catch {
             throw SyncError.shareCreationFailed(error.localizedDescription)
         }
 
+        // Zone'da hâlihazırda bir share var mı? Varsa onu kullan.
+        let shareID = CKRecord.ID(recordName: CKRecordNameZoneWideShare, zoneID: zoneID)
+        do {
+            let existing = try await db.record(for: shareID)
+            if let existingShare = existing as? CKShare {
+                return existingShare
+            }
+        } catch let error as CKError where error.code == .unknownItem {
+            // beklenen — share henüz yok, aşağıda yaratacağız
+        } catch {
+            // diğer fetch hataları kritik değil; create dener
+        }
+
+        // Yeni share yarat
         let share = CKShare(recordZoneID: zoneID)
         share[CKShare.SystemFieldKey.title] = "WordDuel \(code)" as NSString
         share[CKShare.SystemFieldKey.shareType] = "club.kadro.wordduel.match" as NSString
@@ -117,7 +139,7 @@ public actor MatchSyncService {
 
         let result: (saveResults: [CKRecord.ID: Result<CKRecord, Error>], deleteResults: [CKRecord.ID: Result<Void, Error>])
         do {
-            result = try await container.privateCloudDatabase.modifyRecords(
+            result = try await db.modifyRecords(
                 saving: [share],
                 deleting: [],
                 savePolicy: .changedKeys
@@ -126,7 +148,6 @@ public actor MatchSyncService {
             throw SyncError.shareCreationFailed(error.localizedDescription)
         }
 
-        // Server-returned CKShare; bunun `.url`'i populated olur.
         guard let saveResult = result.saveResults[share.recordID] else {
             throw SyncError.shareCreationFailed("No save result for CKShare")
         }
