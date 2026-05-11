@@ -128,6 +128,27 @@ public final class AuthController {
         phase = .idle
     }
 
+    #if DEBUG
+    /// Geliştirme ortamında, Apple Sign In olmadan hızlıca "test kullanıcısı"
+    /// olarak login olmak için. Production'da çağrılmaz (#if DEBUG ile gate'li).
+    /// Aynı `userID` her simulator'da farklı olabilir — farklı test kimlikleri
+    /// için iki cihazda iki farklı string kullan.
+    public func signInAsTestUser(
+        userID: String,
+        displayName: String,
+        modelContext: ModelContext
+    ) {
+        let fakeResult = AppleSignInService.Result(
+            appleUserID: "test." + userID,
+            displayName: displayName,
+            identityTokenData: nil,
+            isFirstTime: true
+        )
+        persist(result: fakeResult, modelContext: modelContext)
+        logger.info("Signed in as test user: \(userID).")
+    }
+    #endif
+
     // MARK: - Private
 
     /// Sign-in başarılı olduğunda çağırılır.

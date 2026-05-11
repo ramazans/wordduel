@@ -70,7 +70,11 @@ struct OnboardingView: View {
         }
         .signInWithAppleButtonStyle(.black)
         .frame(height: 50)
-        .padding()
+        .padding(.horizontal)
+
+        #if DEBUG
+        debugTestUserSection
+        #endif
 
         if case .signingIn = authController.phase {
             ProgressView()
@@ -85,6 +89,46 @@ struct OnboardingView: View {
                 .padding(.horizontal)
         }
     }
+
+    #if DEBUG
+    @ViewBuilder
+    private var debugTestUserSection: some View {
+        VStack(spacing: 8) {
+            Divider().padding(.horizontal, 40)
+            Text("DEBUG — Test Kullanıcısı")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 12) {
+                Button("Alice") {
+                    authController.signInAsTestUser(
+                        userID: "alice",
+                        displayName: "Alice",
+                        modelContext: modelContext
+                    )
+                }
+                .buttonStyle(.bordered)
+                Button("Bob") {
+                    authController.signInAsTestUser(
+                        userID: "bob",
+                        displayName: "Bob",
+                        modelContext: modelContext
+                    )
+                }
+                .buttonStyle(.bordered)
+                Button("Cem") {
+                    authController.signInAsTestUser(
+                        userID: "cem",
+                        displayName: "Cem",
+                        modelContext: modelContext
+                    )
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+        .padding(.top, 8)
+        .padding(.bottom)
+    }
+    #endif
 
     @ViewBuilder
     private func iCloudWarning(_ availability: CloudKitAccount.Availability) -> some View {
