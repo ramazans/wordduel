@@ -15,11 +15,7 @@ struct WordDuelApp: App {
     )
 
     init() {
-        do {
-            container = try SchemaContainer.makeContainer(cloudKit: true)
-        } catch {
-            fatalError("ModelContainer kurulamadı: \(error)")
-        }
+        container = SchemaContainer.makeResilientContainer()
     }
 
     var body: some Scene {
