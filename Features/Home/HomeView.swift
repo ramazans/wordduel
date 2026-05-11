@@ -72,43 +72,53 @@ struct HomeView: View {
 
     @ViewBuilder
     private var content: some View {
-        if matches.isEmpty {
-            ContentUnavailableView {
-                Label("Henüz maç yok", systemImage: "rectangle.stack.badge.plus")
-            } description: {
-                Text("Yeni maç başlat veya kodla katıl.")
-            } actions: {
-                Button("Yeni Maç") { Task { await createNewMatch() } }
-                    .buttonStyle(.borderedProminent)
-            }
-        } else {
-            List {
-                let active = matches.filter { $0.status == .active }
-                let pending = matches.filter { $0.status == .pending }
-                if !active.isEmpty {
-                    Section("Aktif") {
-                        ForEach(active) { match in matchRow(match, isMyTurn: isMyTurn(match)) }
+        ZStack(alignment: .bottom) {
+            if matches.isEmpty {
+                ContentUnavailableView {
+                    Label("Henüz maç yok", systemImage: "rectangle.stack.badge.plus")
+                } description: {
+                    Text("Yeni maç başlat veya kodla katıl.")
+                } actions: {
+                    Button("Yeni Maç") { Task { await createNewMatch() } }
+                        .buttonStyle(.borderedProminent)
+                }
+            } else {
+                List {
+                    let active = matches.filter { $0.status == .active }
+                    let pending = matches.filter { $0.status == .pending }
+                    if !active.isEmpty {
+                        Section("Aktif") {
+                            ForEach(active) { match in matchRow(match, isMyTurn: isMyTurn(match)) }
+                        }
+                    }
+                    if !pending.isEmpty {
+                        Section("Davetler") {
+                            ForEach(pending) { match in matchRow(match, isMyTurn: false) }
+                        }
                     }
                 }
-                if !pending.isEmpty {
-                    Section("Davetler") {
-                        ForEach(pending) { match in matchRow(match, isMyTurn: false) }
-                    }
-                }
+                .animation(.default, value: matches.count)
             }
-            .animation(.default, value: matches.count)
-        }
 
+            statusOverlay
+                .padding(.bottom)
+        }
+    }
+
+    @ViewBuilder
+    private var statusOverlay: some View {
         if case .creating = viewModel?.createState {
             ProgressView("Maç oluşturuluyor…")
                 .padding()
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 .accessibilityLabel("Maç oluşturuluyor")
-        }
-        if case .error(let message) = viewModel?.createState {
+        } else if case .error(let message) = viewModel?.createState {
             Text(message)
                 .font(.wdCaption)
                 .foregroundStyle(.red)
                 .multilineTextAlignment(.center)
+                .padding()
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 .padding(.horizontal)
         }
     }
