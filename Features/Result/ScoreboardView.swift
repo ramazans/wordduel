@@ -98,7 +98,7 @@ struct ScoreboardView: View {
                 .font(.wdHeadline)
             Text("\(score)")
                 .font(.system(size: 56, weight: .bold, design: .rounded))
-                .foregroundStyle(isWinner ? .tint : .primary)
+                .foregroundStyle(isWinner ? Color.accentColor : Color.primary)
                 .contentTransition(.numericText(value: Double(score)))
         }
     }
