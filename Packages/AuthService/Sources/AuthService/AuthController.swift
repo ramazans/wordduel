@@ -46,24 +46,22 @@ public final class AuthController {
 
     // MARK: - Bootstrap (uygulama açılışında)
 
-    /// Saklı kullanıcı varsa credential state'i kontrol eder. Revoke edilmişse temizler.
+    /// Saklı kullanıcı varsa anında `.signedIn` olur. Apple credential state
+    /// kontrolü arka planda yapılır; yalnızca `.revoked` durumunda otomatik
+    /// logout tetiklenir. `.notFound` (simülatör quirk'ı) ve diğer durumlarda
+    /// kullanıcıya güveniriz — explicit logout'la çıkar.
     public func bootstrap(modelContext: ModelContext) async {
         guard let storedID = storedAppleUserID else {
             phase = .idle
             return
         }
+        phase = .signedIn(appleUserID: storedID)
+
         let state = await signInService.currentCredentialState(for: storedID)
-        switch state {
-        case .authorized:
-            phase = .signedIn(appleUserID: storedID)
-        case .revoked, .notFound:
+        if state == .revoked {
             try? PlayerUpsert.delete(appleUserID: storedID, in: modelContext)
             storedAppleUserID = nil
             phase = .revoked
-        case .transferred:
-            phase = .signedIn(appleUserID: storedID)
-        @unknown default:
-            phase = .signedIn(appleUserID: storedID)
         }
     }
 
