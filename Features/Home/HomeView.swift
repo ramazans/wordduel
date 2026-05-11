@@ -29,7 +29,8 @@ struct HomeView: View {
                 }
                 .sheet(isPresented: $showJoinSheet) {
                     JoinByCodeView(syncService: services.matchSyncService)
-                        .presentationDetents([.medium])
+                        .presentationDetents([.medium, .large])
+                        .presentationDragIndicator(.visible)
                 }
                 .task {
                     if viewModel == nil {
