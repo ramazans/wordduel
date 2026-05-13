@@ -11,16 +11,21 @@ struct JoinByCodeView: View {
     }
 
     var body: some View {
+        @Bindable var vm = viewModel
+
         NavigationStack {
             Form {
                 Section {
-                    TextField("6 haneli kod", text: $viewModel.code)
+                    TextField("6 haneli kod", text: $vm.code)
                         .font(.wdMonoSmall)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
                         .keyboardType(.asciiCapable)
-                        .onChange(of: viewModel.code) { _, newValue in
-                            viewModel.code = MatchCodeGenerator.normalize(newValue)
+                        .onChange(of: vm.code) { _, newValue in
+                            let normalized = MatchCodeGenerator.normalize(newValue)
+                            if normalized != newValue {
+                                vm.code = normalized
+                            }
                         }
                 } footer: {
                     Text("Sadece harf ve rakam. Karıştırılan karakterler (0/O, 1/I) kullanılmıyor.")
@@ -32,11 +37,15 @@ struct JoinByCodeView: View {
                         Task { await viewModel.submit() }
                     }
                     .disabled(!viewModel.canSubmit)
+                } footer: {
+                    Text("Normalized kod: \"\(MatchCodeGenerator.normalize(vm.code))\" — canSubmit: \(viewModel.canSubmit ? "evet" : "hayır")")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
 
                 if case .error(let message) = viewModel.state {
                     Section {
-                        Text(message)
+                        Label(message, systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(.red)
                     }
                 }
