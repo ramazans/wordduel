@@ -7,8 +7,10 @@ on:
     branches: [main]
 
 # Aynı dal için push + pull_request çift tetiklemesinde eskisini iptal et.
+# head_ref (PR) ve ref_name (push) aynı dal adını üretir; düz github.ref
+# kullanmak refs/pull/N/merge ile refs/heads/... ayrıştığı için işe yaramaz.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
