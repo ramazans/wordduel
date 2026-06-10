@@ -24,17 +24,28 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - name: Select Xcode 16
-        run: sudo xcode-select -s /Applications/Xcode_16.app
+      # Runner imajında simülatör runtime'ı yalnızca güncel Xcode'lar için kurulu
+      # geliyor; sabit "Xcode_16.app" (16.0) seçmek "iOS 18.0 is not installed"
+      # hatasına yol açıyordu. En yeni kurulu Xcode'u seçiyoruz.
+      - name: Select latest installed Xcode
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode_*.app | sort -V | tail -n 1)
+          echo "Selected: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
       - name: Show Xcode version
         run: xcodebuild -version
       - name: Build & test
         run: |
           if [ -d "wordduel.xcodeproj" ]; then
+            # Cihaz adı Xcode sürümüne göre değişir (iPhone 16, 17, ...);
+            # kurulu ilk uygun iPhone simülatörünü seç.
+            DEVICE=$(xcrun simctl list devices available | grep -oE "iPhone [0-9][^(]*" | head -n 1 | xargs)
+            DEVICE=${DEVICE:-iPhone 16}
+            echo "Using simulator: $DEVICE"
             xcodebuild test \
               -project wordduel.xcodeproj \
               -scheme wordduel \
-              -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+              -destination "platform=iOS Simulator,name=$DEVICE" \
               -enableCodeCoverage YES \
               CODE_SIGNING_ALLOWED=NO
           else
