@@ -1,11 +1,15 @@
 import SwiftUI
+import CoreModels
+import MatchEngine
 import WordRepository
 import DesignSystem
 
 struct AskingView: View {
     var roundNumber: Int = 1
     var totalRounds: Int = 10
+    var dueRepeats: [PendingRepeatItem] = []
     var onAsk: (_ word: String, _ expectedAnswer: String) -> Void = { _, _ in }
+    var onAskRepeat: (PendingRepeatItem) -> Void = { _ in }
 
     @State private var mode: AskMode = .list
     @State private var searchText: String = ""
@@ -13,6 +17,7 @@ struct AskingView: View {
     @State private var words: [SeedWord] = []
     @State private var loadFailed = false
     @State private var pendingWord: SeedWord?
+    @State private var pendingRepeat: PendingRepeatItem?
     @State private var customWord: String = ""
     @State private var customAnswer: String = ""
 
@@ -29,6 +34,10 @@ struct AskingView: View {
 
     var body: some View {
         VStack(spacing: WDSpacing.md) {
+            if !dueRepeats.isEmpty {
+                repeatsSection
+            }
+
             Picker("Mod", selection: $mode) {
                 ForEach(AskMode.allCases) { m in
                     Text(m.label).tag(m)
@@ -65,6 +74,81 @@ struct AskingView: View {
                 Text("Beklenen cevap: \(word.definition)")
             }
         }
+    }
+
+    // MARK: - Tekrar kuyruğu
+
+    /// Vakti gelmiş tekrarlar: rakibin bilemediği kelimeler artık daha çok
+    /// puan değerinde — oyunun ana mekaniği olduğu için en üstte ve vurgulu.
+    private var repeatsSection: some View {
+        VStack(alignment: .leading, spacing: WDSpacing.sm) {
+            Label("Tekrar zamanı", systemImage: "arrow.clockwise")
+                .font(.wdLabel)
+                .foregroundStyle(Color.wdWarning)
+                .padding(.horizontal)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: WDSpacing.sm) {
+                    ForEach(dueRepeats, id: \.self) { item in
+                        repeatCard(item)
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+        .confirmationDialog(
+            pendingRepeat.map { "\"\($0.word)\" tekrar sorulsun mu?" } ?? "",
+            isPresented: repeatConfirmBinding,
+            titleVisibility: .visible
+        ) {
+            Button("Tekrar sor") {
+                if let item = pendingRepeat {
+                    onAskRepeat(item)
+                }
+                pendingRepeat = nil
+            }
+            Button("Vazgeç", role: .cancel) { pendingRepeat = nil }
+        } message: {
+            if let item = pendingRepeat {
+                Text("Yine bilemezse +\(Scoring.points(forWeight: item.weight)) puan kazanırsın.")
+            }
+        }
+    }
+
+    private func repeatCard(_ item: PendingRepeatItem) -> some View {
+        Button {
+            pendingRepeat = item
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.word)
+                    .font(.wdHeadline)
+                    .foregroundStyle(Color.wdInk)
+                    .lineLimit(1)
+                Text("+\(Scoring.points(forWeight: item.weight)) puan değerinde")
+                    .font(.wdLabel)
+                    .foregroundStyle(Color.wdWarning)
+            }
+            .padding(12)
+            .background(
+                Color.wdWarning.opacity(0.1),
+                in: RoundedRectangle(cornerRadius: WDRadius.md, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: WDRadius.md, style: .continuous)
+                    .strokeBorder(Color.wdWarning.opacity(0.35), lineWidth: 1)
+            )
+        }
+        .buttonStyle(WDPressableButtonStyle())
+        .accessibilityLabel(
+            "Tekrar: \(item.word), bilemezse \(Scoring.points(forWeight: item.weight)) puan. Sormak için dokun."
+        )
+    }
+
+    private var repeatConfirmBinding: Binding<Bool> {
+        Binding(
+            get: { pendingRepeat != nil },
+            set: { if !$0 { pendingRepeat = nil } }
+        )
     }
 
     // MARK: - Liste modu
@@ -260,5 +344,14 @@ struct AskingView: View {
 }
 
 #Preview {
-    NavigationStack { AskingView(roundNumber: 4, totalRounds: 10) }
+    NavigationStack {
+        AskingView(
+            roundNumber: 4,
+            totalRounds: 10,
+            dueRepeats: [
+                PendingRepeatItem(word: "ephemeral", expectedAnswer: "geçici", dueAtRoundIndex: 3, weight: 2),
+                PendingRepeatItem(word: "diligent", expectedAnswer: "çalışkan", dueAtRoundIndex: 3, weight: 3)
+            ]
+        )
+    }
 }

@@ -1,13 +1,19 @@
 import SwiftUI
+import SwiftData
 import L10n
+import CoreModels
 import CloudKitService
+import AuthService
 import DesignSystem
 
 struct SettingsView: View {
+    @Environment(\.modelContext) private var modelContext
     @Environment(AppServices.self) private var services
+    @Environment(AuthController.self) private var authController
     @AppStorage("language") private var language: String = L10n.Language.system.rawValue
     @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
     @State private var notificationStatus: LocalNotificationScheduler.AuthorizationStatus = .notDetermined
+    @State private var showSignOutConfirm = false
     @State private var showDeleteConfirm = false
 
     var body: some View {
@@ -59,30 +65,59 @@ struct SettingsView: View {
             }
 
             Section {
+                Button {
+                    showSignOutConfirm = true
+                } label: {
+                    settingsLabel("Çıkış Yap", systemImage: "rectangle.portrait.and.arrow.right", tint: .wdInkSecondary)
+                }
+
                 Button(role: .destructive) {
                     showDeleteConfirm = true
                 } label: {
                     settingsLabel("Hesabı Sil", systemImage: "trash.fill", tint: .wdDanger)
                         .foregroundStyle(Color.wdDanger)
                 }
+            } header: {
+                Text("Hesap")
             } footer: {
-                Text("Tüm maçların ve geçmişin kalıcı olarak silinir.")
+                Text("Hesap silme tüm maçlarını ve geçmişini kalıcı olarak siler.")
             }
         }
         .navigationTitle("Ayarlar")
         .task { await refreshAuthorizationStatus() }
+        .confirmationDialog(
+            "Çıkış yapmak istediğine emin misin?",
+            isPresented: $showSignOutConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Çıkış Yap") {
+                authController.signOut(modelContext: modelContext)
+            }
+            Button("Vazgeç", role: .cancel) {}
+        } message: {
+            Text("Maçların silinmez; tekrar giriş yaptığında kaldığın yerden devam edersin.")
+        }
         .confirmationDialog(
             "Hesabı silmek istediğine emin misin?",
             isPresented: $showDeleteConfirm,
             titleVisibility: .visible
         ) {
             Button("Sil", role: .destructive) {
-                // TODO: CloudKit kayıtlarını temizle, AuthController.signOut çağır.
+                deleteAccount()
             }
             Button("Vazgeç", role: .cancel) {}
         } message: {
             Text("Tüm maçların ve geçmişin kalıcı olarak silinecek.")
         }
+    }
+
+    /// Yerel + senkronize verileri siler ve oturumu kapatır. SwiftData'nın
+    /// CloudKit aynası silmeleri private DB'ye de yansıtır.
+    private func deleteAccount() {
+        try? modelContext.delete(model: Match.self)
+        try? modelContext.delete(model: Player.self)
+        try? modelContext.save()
+        authController.signOut(modelContext: modelContext)
     }
 
     /// iOS Ayarlar tarzı: renkli yuvarlatılmış karede ikon + başlık.
@@ -133,4 +168,6 @@ struct SettingsView: View {
 
 #Preview {
     NavigationStack { SettingsView() }
+        .modelContainer(for: [Player.self, Match.self, Round.self], inMemory: true)
+        .environment(AuthController())
 }

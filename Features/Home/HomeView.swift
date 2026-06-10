@@ -49,10 +49,12 @@ struct HomeView: View {
                     if viewModel == nil {
                         viewModel = HomeViewModel(syncService: services.matchSyncService)
                     }
+                    claimGuestSeats()
                     await scheduleTurnNotifications()
                 }
                 .task {
                     for await _ in services.pushUpdates {
+                        claimGuestSeats()
                         await scheduleTurnNotifications()
                     }
                 }
@@ -82,6 +84,7 @@ struct HomeView: View {
             .padding(.bottom, WDSpacing.md)
         }
         .refreshable {
+            claimGuestSeats()
             await scheduleTurnNotifications()
         }
     }
@@ -268,6 +271,17 @@ struct HomeView: View {
     }
 
     private func matchCard(_ match: Match, isMyTurn: Bool) -> some View {
+        NavigationLink {
+            MatchDetailView(match: match) {
+                Task { await createNewMatch() }
+            }
+        } label: {
+            matchCardLabel(match, isMyTurn: isMyTurn)
+        }
+        .buttonStyle(WDPressableButtonStyle())
+    }
+
+    private func matchCardLabel(_ match: Match, isMyTurn: Bool) -> some View {
         let stats = MatchStats(myAppleUserID: myAppleUserID())
         let opponent = stats.opponent(in: match)
 
@@ -444,9 +458,20 @@ struct HomeView: View {
         match.rounds.first { $0.index == match.currentRoundIndex }
     }
 
+    /// Faza göre aksiyon bende mi: kelime seçme, cevaplama veya değerlendirme.
     private func isMyTurn(_ match: Match) -> Bool {
-        guard let me = myRole(in: match), let round = currentRound(of: match) else { return false }
-        return round.askerRole != me && round.judgement == .pendingReview
+        guard let me = myRole(in: match) else { return false }
+        let flow = MatchFlow(match: match)
+        switch flow.phase {
+        case .picking(let asker):
+            return asker == me
+        case .answering:
+            return flow.currentRound?.askerRole != me
+        case .reviewing:
+            return flow.currentRound?.askerRole == me
+        case .waitingForOpponent, .finished:
+            return false
+        }
     }
 
     private func rowAccessibilityLabel(for match: Match, isMyTurn: Bool) -> String {
@@ -454,6 +479,21 @@ struct HomeView: View {
         let opponentName = stats.opponent(in: match)?.displayName ?? "Rakip"
         let turnNote = isMyTurn ? ", sıra sende" : ""
         return "Maç: \(opponentName) ile, tur \(match.currentRoundIndex + 1) / \(match.totalRounds), skor \(stats.myScore(in: match)) - \(stats.opponentScore(in: match))\(turnNote)"
+    }
+
+    /// Davet kabulünden sonra paylaşılan maç kaydı cihaza ulaştığında
+    /// guest koltuğunu kapar; maç iki tarafta da aktifleşir.
+    private func claimGuestSeats() {
+        guard let myID = myAppleUserID(), let me else { return }
+        var claimed = false
+        for match in matches where match.status == .pending {
+            let before = match.status
+            MatchFlow.claimGuestSeatIfNeeded(match: match, me: me, myAppleUserID: myID)
+            if match.status != before { claimed = true }
+        }
+        if claimed {
+            try? modelContext.save()
+        }
     }
 
     private func scheduleTurnNotifications() async {
