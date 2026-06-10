@@ -49,10 +49,15 @@ jobs:
             DEVICE=$(xcrun simctl list devices available | grep -oE "iPhone [0-9][^(]*" | head -n 1 | xargs)
             DEVICE=${DEVICE:-iPhone 16}
             echo "Using simulator: $DEVICE"
+            # Paylaşımlı runner'da paralel simülatör klonları CPU açlığından
+            # 'lockdown timed out' flake'i üretiyor; tek simülatörde koş ve
+            # flake'lenen testi otomatik yeniden dene.
             xcodebuild test \
               -project wordduel.xcodeproj \
               -scheme wordduel \
               -destination "platform=iOS Simulator,name=$DEVICE" \
+              -maximum-concurrent-test-simulator-destinations 1 \
+              -retry-tests-on-failure \
               -enableCodeCoverage YES \
               CODE_SIGNING_ALLOWED=NO
           else
