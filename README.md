@@ -41,6 +41,17 @@ wordduel/
 └─ Tests/                   # XCTest + XCUITest
 ```
 
+## Tasarım Sistemi
+
+Arayüz, Airbnb iOS uygulamasındaki gibi "native ama custom" hissi hedefler. Tüm görsel dil `Packages/DesignSystem` altında token'lara dayanır:
+
+- **Renk** — sıcak mercan marka rengi (`wdAccent`, açık/karanlık moda duyarlı), yüzeyler (`wdSurface`, `wdSurfaceSecondary`), metin (`wdInk`, `wdInkSecondary`), anlamsal renkler ve CTA gradient'i (`LinearGradient.wdAccentGradient`).
+- **Tipografi** — başlıklarda yuvarlatılmış (rounded) sistem fontu: `wdDisplay`, `wdTitle`, `wdLabel`, `wdScore`…
+- **Boşluk & köşe** — `WDSpacing` (4'lü ritim) ve `WDRadius` (her zaman `.continuous`).
+- **Bileşenler** — `PrimaryButton`/`SecondaryButton` (basınca küçülen, gradient dolgulu), `AvatarView` (kazanan halkalı), `WordCard`, `TimerRing` (dairesel geri sayım), `CodeDigitsView`/`CodeInputField` (kutulu davet kodu), `.wdCard()` kart yüzeyi.
+
+Ürün dili "iki yakın arkadaşın rekabeti" üzerine kurulu: ana ekranda kafa kafaya galibiyet sayan **Ezeli Rekabet** kartı, "Sıra sende" rozetleri, maç sonunda rövanşa çağıran skor ekranı.
+
 ## Geliştirme
 
 Xcode 16+ ve iOS 18 SDK gerekir. Repo'yu klonladıktan sonra Mac'te `wordduel.xcodeproj` açılır (proje dosyası ilk kurulumda manuel olarak veya XcodeGen ile üretilir).

@@ -11,35 +11,41 @@ struct OnboardingView: View {
     @State private var viewModel: SignInViewModel?
     @State private var page = 0
 
+    private static let pageCount = 3
+
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
             TabView(selection: $page) {
                 onboardingPage(
                     title: "WordDuel'e Hoş Geldin",
-                    subtitle: "Arkadaşınla İngilizce kelime düellosu.",
-                    systemImage: "text.book.closed.fill"
+                    subtitle: "En yakın arkadaşınla İngilizce kelime düellosu. Öğrenmenin en tatlı hâli: rekabet.",
+                    systemImage: "figure.fencing"
                 )
                 .tag(0)
 
                 onboardingPage(
-                    title: "Davet Kodu Paylaş",
-                    subtitle: "6 haneli kod ile arkadaşını çağır.",
+                    title: "Rakibini Davet Et",
+                    subtitle: "6 haneli kodu arkadaşına gönder, düello saniyeler içinde başlasın.",
                     systemImage: "qrcode"
                 )
                 .tag(1)
 
                 onboardingPage(
-                    title: "Sıra Sende",
-                    subtitle: "30 saniye içinde cevapla, puanı kaptır.",
+                    title: "30 Saniyede Cevapla",
+                    subtitle: "Bilemediğin kelime tekrar karşına çıkar — bilene kadar puanı rakibin toplar.",
                     systemImage: "timer"
                 )
                 .tag(2)
             }
-            .tabViewStyle(.page)
-            .indexViewStyle(.page(backgroundDisplayMode: .always))
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .animation(.snappy, value: page)
+
+            pageDots
+                .padding(.bottom, WDSpacing.lg)
 
             footer
         }
+        .background(onboardingBackground)
         .task {
             if viewModel == nil {
                 viewModel = SignInViewModel(
@@ -51,15 +57,56 @@ struct OnboardingView: View {
         }
     }
 
+    private var onboardingBackground: some View {
+        ZStack {
+            Color.wdBackground
+            LinearGradient(
+                colors: [Color.wdAccent.opacity(0.1), .clear],
+                startPoint: .top,
+                endPoint: .center
+            )
+        }
+        .ignoresSafeArea()
+    }
+
+    private var pageDots: some View {
+        HStack(spacing: WDSpacing.sm) {
+            ForEach(0..<Self.pageCount, id: \.self) { index in
+                Capsule()
+                    .fill(index == page ? Color.wdAccent : Color.wdSeparator.opacity(0.6))
+                    .frame(width: index == page ? 24 : 8, height: 8)
+                    .animation(.snappy, value: page)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Sayfa \(page + 1) / \(Self.pageCount)")
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: page = min(page + 1, Self.pageCount - 1)
+            case .decrement: page = max(page - 1, 0)
+            @unknown default: break
+            }
+        }
+    }
+
     @ViewBuilder
     private var footer: some View {
         if let vm = viewModel, !vm.iCloudAvailability.isAvailable {
-            ContentUnavailableView {
-                Label("iCloud kullanılamıyor", systemImage: "exclamationmark.icloud")
-            } description: {
+            HStack(spacing: WDSpacing.sm) {
+                Image(systemName: "exclamationmark.icloud.fill")
+                    .foregroundStyle(Color.wdWarning)
                 Text(vm.iCloudAvailability.userMessage)
+                    .font(.wdCaption)
+                    .foregroundStyle(Color.wdInk)
             }
-            .padding(.bottom)
+            .padding(WDSpacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                Color.wdWarning.opacity(0.12),
+                in: RoundedRectangle(cornerRadius: WDRadius.md, style: .continuous)
+            )
+            .padding(.horizontal)
+            .padding(.bottom, WDSpacing.sm)
         }
 
         SignInWithAppleButton(.signIn) { request in
@@ -68,9 +115,11 @@ struct OnboardingView: View {
             viewModel?.handleAppleSignIn(result, modelContext: modelContext)
         }
         .signInWithAppleButtonStyle(.black)
-        .frame(height: 50)
+        .frame(height: 52)
+        .clipShape(RoundedRectangle(cornerRadius: WDRadius.md, style: .continuous))
         .disabled(viewModel?.iCloudAvailability.isAvailable != true)
-        .padding()
+        .padding(.horizontal)
+        .padding(.bottom, WDSpacing.md)
 
         if case .signingIn = authController.phase {
             ProgressView()
@@ -80,26 +129,33 @@ struct OnboardingView: View {
         if case .error(let message) = authController.phase {
             Text(message)
                 .font(.wdCaption)
-                .foregroundStyle(.red)
+                .foregroundStyle(Color.wdDanger)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
+                .padding(.bottom, WDSpacing.sm)
         }
     }
 
     @ViewBuilder
     private func onboardingPage(title: String, subtitle: String, systemImage: String) -> some View {
-        VStack(spacing: 24) {
+        VStack(spacing: WDSpacing.lg) {
             Image(systemName: systemImage)
-                .font(.system(size: 80))
-                .foregroundStyle(.tint)
+                .font(.system(size: 64))
+                .foregroundStyle(Color.wdAccent)
+                .frame(width: 140, height: 140)
+                .background(Color.wdAccent.opacity(0.12), in: Circle())
+                .accessibilityHidden(true)
+
             Text(title)
                 .font(.wdLargeTitle)
+                .foregroundStyle(Color.wdInk)
                 .multilineTextAlignment(.center)
+
             Text(subtitle)
                 .font(.wdBody)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.wdInkSecondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+                .padding(.horizontal, WDSpacing.xl)
         }
         .padding()
     }

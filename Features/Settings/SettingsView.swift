@@ -1,6 +1,7 @@
 import SwiftUI
 import L10n
 import CloudKitService
+import DesignSystem
 
 struct SettingsView: View {
     @Environment(AppServices.self) private var services
@@ -12,24 +13,33 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("Dil") {
-                Picker("Dil", selection: $language) {
+                Picker(selection: $language) {
                     ForEach(L10n.Language.allCases, id: \.rawValue) { lang in
                         Text(lang.displayName).tag(lang.rawValue)
                     }
+                } label: {
+                    settingsLabel("Dil", systemImage: "globe", tint: .blue)
                 }
                 .pickerStyle(.menu)
             }
 
             Section {
-                Toggle("\"Sıra sende\" bildirimleri", isOn: $notificationsEnabled)
-                    .disabled(notificationStatus == .denied)
+                Toggle(isOn: $notificationsEnabled) {
+                    settingsLabel("\"Sıra sende\" bildirimleri", systemImage: "bell.badge.fill", tint: .wdAccent)
+                }
+                .disabled(notificationStatus == .denied)
+
                 if notificationStatus == .notDetermined {
-                    Button("Bildirimlere izin ver") {
+                    Button {
                         Task { await requestNotificationAuthorization() }
+                    } label: {
+                        settingsLabel("Bildirimlere izin ver", systemImage: "checkmark.circle.fill", tint: .wdSuccess)
                     }
                 } else if notificationStatus == .denied {
-                    Button("iOS Ayarlarında izin ver") {
+                    Button {
                         openAppSettings()
+                    } label: {
+                        settingsLabel("iOS Ayarlarında izin ver", systemImage: "arrow.up.forward.app.fill", tint: .wdInkSecondary)
                     }
                 }
             } header: {
@@ -39,15 +49,24 @@ struct SettingsView: View {
             }
 
             Section {
-                Button("Hesabı Sil", role: .destructive) {
-                    showDeleteConfirm = true
+                LabeledContent {
+                    Text(appVersionString)
+                } label: {
+                    settingsLabel("Sürüm", systemImage: "info.circle.fill", tint: .wdInkSecondary)
                 }
+            } header: {
+                Text("Hakkında")
             }
 
             Section {
-                LabeledContent("Sürüm", value: appVersionString)
-            } header: {
-                Text("Hakkında")
+                Button(role: .destructive) {
+                    showDeleteConfirm = true
+                } label: {
+                    settingsLabel("Hesabı Sil", systemImage: "trash.fill", tint: .wdDanger)
+                        .foregroundStyle(Color.wdDanger)
+                }
+            } footer: {
+                Text("Tüm maçların ve geçmişin kalıcı olarak silinir.")
             }
         }
         .navigationTitle("Ayarlar")
@@ -63,6 +82,18 @@ struct SettingsView: View {
             Button("Vazgeç", role: .cancel) {}
         } message: {
             Text("Tüm maçların ve geçmişin kalıcı olarak silinecek.")
+        }
+    }
+
+    /// iOS Ayarlar tarzı: renkli yuvarlatılmış karede ikon + başlık.
+    private func settingsLabel(_ title: LocalizedStringKey, systemImage: String, tint: Color) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.footnote)
+                .foregroundStyle(.white)
+                .frame(width: 28, height: 28)
+                .background(tint, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            Text(title)
         }
     }
 
