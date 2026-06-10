@@ -12,19 +12,20 @@ public struct WordCard: View {
     }
 
     public var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: WDSpacing.md) {
             if isRepeat {
                 Label("Tekrar", systemImage: "arrow.clockwise")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
+                    .font(.wdLabel)
+                    .foregroundStyle(Color.wdWarning)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(.orange.opacity(0.15), in: Capsule())
+                    .background(Color.wdWarning.opacity(0.15), in: Capsule())
                     .accessibilityLabel("Tekrar sorulan kelime")
             }
 
             Text(word)
                 .font(.system(size: 44, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.wdInk)
                 .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.5)
                 .lineLimit(2)
@@ -35,19 +36,17 @@ public struct WordCard: View {
                 ))
 
             if let hint, !hint.isEmpty {
-                Text(hint)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                Text(hint.uppercased())
+                    .font(.wdLabel)
+                    .foregroundStyle(Color.wdInkSecondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.wdSurfaceSecondary, in: Capsule())
             }
         }
-        .padding(24)
+        .padding(WDSpacing.xl)
         .frame(maxWidth: .infinity)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
-        .overlay {
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.wdSeparator, lineWidth: 0.5)
-        }
+        .wdCard(padding: 0, cornerRadius: WDRadius.xl)
         .animation(.spring(duration: 0.5), value: word)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isStaticText)

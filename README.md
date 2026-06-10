@@ -41,6 +41,30 @@ wordduel/
 └─ Tests/                   # XCTest + XCUITest
 ```
 
+## Maç Akışı (Mimari)
+
+Maç durumu SwiftData'da yaşar ve CloudKit (`CKShare`) üzerinden iki cihaza senkronize olur; ayrı bir "oyun sunucusu" yoktur.
+
+- **`MatchEngine`** (paket): kuralların saf, test edilebilir referansı.
+- **`Features/Match/MatchFlow.swift`**: aynı kuralları kalıcı `Match`/`Round` modeline uygulayan akış katmanı — tur oluşturma, `AnswerNormalizer` ile otomatik karar, 2→4→8 puanlama, tekrar kuyruğu (`Match.pendingRepeats`), maç bitişi.
+- **`MatchDetailView`**: faza göre ekran seçer — kelime seçme (`AskingView`, tekrar kuyruğu bölümüyle), cevaplama (`AnsweringView`, 30 sn halka sayaç), manuel değerlendirme (`ReviewAnswerView`), bekleme durumları ve skor tablosu (`ScoreboardView`).
+- Tur sırası: çift indeksli turları **host**, tekleri **guest** sorar.
+- Davet kabulünde paylaşılan kayıt cihaza ulaşınca guest koltuğu `MatchFlow.claimGuestSeatIfNeeded` ile kapılır ve maç aktifleşir.
+- Cevaplayanın cihazı kapalıysa: süre + 10 sn pay dolduktan sonra asker turu tek taraflı kapatabilir.
+
+**Bilinen sınırlama (cihazda doğrulanacak):** `Match.guest` ilişkisi, guest'in kendi private DB'sindeki `Player` kaydına bağlanır; CKShare zone'ları arası ilişki davranışı Mac/cihaz üzerinde test edilip gerekirse `guestAppleUserID` alanına geçilmelidir (`MatchSyncService` içindeki CKShare notlarıyla birlikte).
+
+## Tasarım Sistemi
+
+Arayüz, Airbnb iOS uygulamasındaki gibi "native ama custom" hissi hedefler. Tüm görsel dil `Packages/DesignSystem` altında token'lara dayanır:
+
+- **Renk** — sıcak mercan marka rengi (`wdAccent`, açık/karanlık moda duyarlı), yüzeyler (`wdSurface`, `wdSurfaceSecondary`), metin (`wdInk`, `wdInkSecondary`), anlamsal renkler ve CTA gradient'i (`LinearGradient.wdAccentGradient`).
+- **Tipografi** — başlıklarda yuvarlatılmış (rounded) sistem fontu: `wdDisplay`, `wdTitle`, `wdLabel`, `wdScore`…
+- **Boşluk & köşe** — `WDSpacing` (4'lü ritim) ve `WDRadius` (her zaman `.continuous`).
+- **Bileşenler** — `PrimaryButton`/`SecondaryButton` (basınca küçülen, gradient dolgulu), `AvatarView` (kazanan halkalı), `WordCard`, `TimerRing` (dairesel geri sayım), `CodeDigitsView`/`CodeInputField` (kutulu davet kodu), `.wdCard()` kart yüzeyi.
+
+Ürün dili "iki yakın arkadaşın rekabeti" üzerine kurulu: ana ekranda kafa kafaya galibiyet sayan **Ezeli Rekabet** kartı, "Sıra sende" rozetleri, maç sonunda rövanşa çağıran skor ekranı.
+
 ## Geliştirme
 
 Xcode 16+ ve iOS 18 SDK gerekir. Repo'yu klonladıktan sonra Mac'te `wordduel.xcodeproj` açılır (proje dosyası ilk kurulumda manuel olarak veya XcodeGen ile üretilir).

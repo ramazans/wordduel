@@ -9,34 +9,93 @@ struct ReviewAnswerView: View {
     let onReject: () -> Void
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Cevabı Değerlendir")
-                .font(.wdTitle)
-
-            VStack(alignment: .leading, spacing: 12) {
-                LabeledContent("Kelime", value: word)
-                LabeledContent("Beklenen", value: expectedAnswer)
-                LabeledContent("Verilen", value: givenAnswer.isEmpty ? "—" : givenAnswer)
+        VStack(spacing: WDSpacing.lg) {
+            VStack(spacing: WDSpacing.xs) {
+                Text("Cevabı Değerlendir")
+                    .font(.wdTitle)
+                    .foregroundStyle(Color.wdInk)
+                Text("Rakibinin cevabı sayılır mı? Karar senin.")
+                    .font(.wdSubheadline)
+                    .foregroundStyle(Color.wdInkSecondary)
             }
-            .padding()
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
 
-            HStack(spacing: 12) {
-                Button(role: .destructive, action: onReject) {
-                    Label("Yanlış say", systemImage: "xmark.circle.fill")
+            WordCard(word: word)
+
+            VStack(spacing: 0) {
+                answerRow(
+                    title: "Beklenen cevap",
+                    value: expectedAnswer,
+                    systemImage: "checkmark.seal.fill",
+                    tint: .wdSuccess
+                )
+                Divider()
+                    .padding(.leading, 52)
+                answerRow(
+                    title: "Onun cevabı",
+                    value: givenAnswer.isEmpty ? "Cevap vermedi" : givenAnswer,
+                    systemImage: "person.fill",
+                    tint: .wdAccent
+                )
+            }
+            .wdCard(padding: WDSpacing.xs)
+
+            Text("Küçük yazım hatalarını görmezden gelebilirsin — önemli olan anlamı bilmesi.")
+                .font(.wdCaption)
+                .foregroundStyle(Color.wdInkSecondary)
+                .multilineTextAlignment(.center)
+
+            HStack(spacing: WDSpacing.sm) {
+                Button(action: onReject) {
+                    Label("Yanlış", systemImage: "xmark")
+                        .font(.wdHeadline)
                         .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .foregroundStyle(Color.wdDanger)
+                        .background(
+                            Color.wdDanger.opacity(0.12),
+                            in: RoundedRectangle(cornerRadius: WDRadius.md, style: .continuous)
+                        )
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(WDPressableButtonStyle())
 
                 Button(action: onAccept) {
-                    Label("Doğru say", systemImage: "checkmark.circle.fill")
+                    Label("Doğru", systemImage: "checkmark")
+                        .font(.wdHeadline)
                         .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .foregroundStyle(.white)
+                        .background(
+                            Color.wdSuccess,
+                            in: RoundedRectangle(cornerRadius: WDRadius.md, style: .continuous)
+                        )
+                        .shadow(color: Color.wdSuccess.opacity(0.3), radius: 10, x: 0, y: 5)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(WDPressableButtonStyle())
             }
-            .controlSize(.large)
         }
         .padding()
+        .background(Color.wdBackground)
+    }
+
+    private func answerRow(title: String, value: String, systemImage: String, tint: Color) -> some View {
+        HStack(spacing: WDSpacing.md) {
+            Image(systemName: systemImage)
+                .foregroundStyle(tint)
+                .frame(width: 36, height: 36)
+                .background(tint.opacity(0.12), in: Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.wdCaption)
+                    .foregroundStyle(Color.wdInkSecondary)
+                Text(value)
+                    .font(.wdHeadline)
+                    .foregroundStyle(Color.wdInk)
+            }
+            Spacer()
+        }
+        .padding(12)
+        .accessibilityElement(children: .combine)
     }
 }
 

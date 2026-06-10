@@ -45,7 +45,7 @@ public enum AnswerNormalizer {
         return prev[n]
     }
 
-    public enum AutoVerdict: Equatable {
+    public enum AutoVerdict: Equatable, Sendable {
         case correct
         case wrong
         case needsManualReview

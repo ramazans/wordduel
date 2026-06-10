@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [main]
 
+# Aynı dal için push + pull_request çift tetiklemesinde eskisini iptal et.
+# head_ref (PR) ve ref_name (push) aynı dal adını üretir; düz github.ref
+# kullanmak refs/pull/N/merge ile refs/heads/... ayrıştığı için işe yaramaz.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   match-engine-tests:
     name: MatchEngine (Linux)
@@ -24,17 +31,33 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - name: Select Xcode 16
-        run: sudo xcode-select -s /Applications/Xcode_16.app
+      # Runner imajında simülatör runtime'ı yalnızca güncel Xcode'lar için kurulu
+      # geliyor; sabit "Xcode_16.app" (16.0) seçmek "iOS 18.0 is not installed"
+      # hatasına yol açıyordu. En yeni kurulu Xcode'u seçiyoruz.
+      - name: Select latest installed Xcode
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode_*.app | sort -V | tail -n 1)
+          echo "Selected: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
       - name: Show Xcode version
         run: xcodebuild -version
       - name: Build & test
         run: |
           if [ -d "wordduel.xcodeproj" ]; then
+            # Cihaz adı Xcode sürümüne göre değişir (iPhone 16, 17, ...);
+            # kurulu ilk uygun iPhone simülatörünü seç.
+            DEVICE=$(xcrun simctl list devices available | grep -oE "iPhone [0-9][^(]*" | head -n 1 | xargs)
+            DEVICE=${DEVICE:-iPhone 16}
+            echo "Using simulator: $DEVICE"
+            # Paylaşımlı runner'da paralel simülatör klonları CPU açlığından
+            # 'lockdown timed out' flake'i üretiyor; tek simülatörde koş ve
+            # flake'lenen testi otomatik yeniden dene.
             xcodebuild test \
               -project wordduel.xcodeproj \
               -scheme wordduel \
-              -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+              -destination "platform=iOS Simulator,name=$DEVICE" \
+              -maximum-concurrent-test-simulator-destinations 1 \
+              -retry-tests-on-failure \
               -enableCodeCoverage YES \
               CODE_SIGNING_ALLOWED=NO
           else

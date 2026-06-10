@@ -10,6 +10,8 @@ struct ScoreboardView: View {
     let onHome: () -> Void
 
     @State private var hasAppeared = false
+    @State private var displayedHostScore = 0
+    @State private var displayedGuestScore = 0
 
     private var winner: Winner {
         if hostScore > guestScore { return .host }
@@ -20,50 +22,117 @@ struct ScoreboardView: View {
     enum Winner { case host, guest, tie }
 
     var body: some View {
-        VStack(spacing: 32) {
+        VStack(spacing: WDSpacing.xl) {
             Spacer()
 
-            if winner != .tie {
-                Image(systemName: "trophy.fill")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.yellow)
-                    .symbolEffect(.bounce, value: hasAppeared)
-                    .accessibilityHidden(true)
+            VStack(spacing: WDSpacing.md) {
+                if winner == .tie {
+                    Image(systemName: "equal.circle.fill")
+                        .font(.system(size: 56))
+                        .foregroundStyle(Color.wdInkSecondary)
+                        .accessibilityHidden(true)
+                } else {
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 56))
+                        .foregroundStyle(LinearGradient.wdGoldGradient)
+                        .symbolEffect(.bounce, value: hasAppeared)
+                        .shadow(color: Color.wdGold.opacity(0.4), radius: 12, x: 0, y: 4)
+                        .accessibilityHidden(true)
+                }
+
+                Text(resultTitle)
+                    .font(.wdLargeTitle)
+                    .foregroundStyle(Color.wdInk)
+                    .multilineTextAlignment(.center)
+                Text(resultSubtitle)
+                    .font(.wdSubheadline)
+                    .foregroundStyle(Color.wdInkSecondary)
             }
 
-            HStack(spacing: 32) {
+            HStack(alignment: .top) {
                 playerColumn(
                     name: hostName,
-                    score: hostScore,
+                    score: displayedHostScore,
                     isWinner: winner == .host,
-                    color: AvatarPalette.color(for: 0)
+                    colorIndex: 0
                 )
-                Text("—")
-                    .font(.largeTitle)
-                    .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+
+                Text("VS")
+                    .font(.system(size: 16, weight: .black, design: .rounded))
+                    .foregroundStyle(Color.wdInkSecondary)
+                    .padding(.top, WDSpacing.xl)
                     .accessibilityHidden(true)
+
                 playerColumn(
                     name: guestName,
-                    score: guestScore,
+                    score: displayedGuestScore,
                     isWinner: winner == .guest,
-                    color: AvatarPalette.color(for: 1)
+                    colorIndex: 1
                 )
+                .frame(maxWidth: .infinity)
             }
+            .wdCard(padding: WDSpacing.lg)
+            .padding(.horizontal)
 
             Spacer()
 
-            VStack(spacing: 12) {
-                PrimaryButton("Tekrar Oyna", action: onPlayAgain)
-                Button("Ana Ekran", action: onHome)
+            VStack(spacing: WDSpacing.sm) {
+                PrimaryButton("Tekrar Oyna", systemImage: "arrow.counterclockwise", action: onPlayAgain)
+                Button("Ana Ekrana Dön", action: onHome)
+                    .font(.wdHeadline)
+                    .foregroundStyle(Color.wdInkSecondary)
+                    .padding(.vertical, WDSpacing.sm)
             }
             .padding(.horizontal)
         }
         .padding()
+        .background(celebrationBackground)
         .accessibilityLabel(scoreboardAccessibilityLabel)
         .onAppear {
             withAnimation(.spring(duration: 0.6).delay(0.2)) {
                 hasAppeared = true
             }
+            withAnimation(.snappy(duration: 1.0).delay(0.4)) {
+                displayedHostScore = hostScore
+                displayedGuestScore = guestScore
+            }
+        }
+    }
+
+    private var celebrationBackground: some View {
+        ZStack {
+            Color.wdBackground
+            RadialGradient(
+                colors: [accentForWinner.opacity(0.18), .clear],
+                center: .top,
+                startRadius: 0,
+                endRadius: 420
+            )
+        }
+        .ignoresSafeArea()
+    }
+
+    private var accentForWinner: Color {
+        switch winner {
+        case .host: return AvatarPalette.color(for: 0)
+        case .guest: return AvatarPalette.color(for: 1)
+        case .tie: return .wdAccent
+        }
+    }
+
+    private var resultTitle: String {
+        switch winner {
+        case .host: return "\(hostName) kazandı!"
+        case .guest: return "\(guestName) kazandı!"
+        case .tie: return "Beraberlik!"
+        }
+    }
+
+    private var resultSubtitle: String {
+        switch winner {
+        case .host, .guest: return "Rövanş için yeni maç başlatın."
+        case .tie: return "Bu rekabet böyle bitmez — rövanş şart."
         }
     }
 
@@ -79,26 +148,25 @@ struct ScoreboardView: View {
     }
 
     @ViewBuilder
-    private func playerColumn(name: String, score: Int, isWinner: Bool, color: Color) -> some View {
-        VStack(spacing: 12) {
-            Circle()
-                .fill(color)
-                .frame(width: 80, height: 80)
-                .overlay(
-                    Text(name.prefix(1).uppercased())
-                        .font(.wdLargeTitle)
-                        .foregroundStyle(.white)
-                )
-                .scaleEffect(isWinner && hasAppeared ? 1.1 : 1.0)
-                .shadow(color: isWinner ? color.opacity(0.4) : .clear, radius: 8)
-                .animation(.spring(duration: 0.6), value: hasAppeared)
-                .accessibilityHidden(true)
+    private func playerColumn(name: String, score: Int, isWinner: Bool, colorIndex: Int) -> some View {
+        VStack(spacing: WDSpacing.sm) {
+            AvatarView(
+                name: name,
+                colorIndex: colorIndex,
+                size: 72,
+                isHighlighted: isWinner
+            )
+            .scaleEffect(isWinner && hasAppeared ? 1.08 : 1.0)
+            .animation(.spring(duration: 0.6), value: hasAppeared)
 
             Text(name)
                 .font(.wdHeadline)
+                .foregroundStyle(Color.wdInk)
+                .lineLimit(1)
+
             Text("\(score)")
-                .font(.system(size: 56, weight: .bold, design: .rounded))
-                .foregroundStyle(isWinner ? .tint : .primary)
+                .font(.wdScore)
+                .foregroundStyle(isWinner ? Color.wdAccent : Color.wdInk)
                 .contentTransition(.numericText(value: Double(score)))
         }
     }

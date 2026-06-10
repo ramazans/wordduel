@@ -11,29 +11,53 @@ struct AnsweringView: View {
     @State private var answer: String = ""
     @State private var hasSubmitted = false
     @State private var lastWarningTriggered = false
+    @FocusState private var answerFocused: Bool
 
     private var countdown: Countdown {
         Countdown(startedAt: startedAt, durationSeconds: durationSeconds)
     }
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: WDSpacing.lg) {
             timer
 
             WordCard(word: word)
 
-            TextField("Türkçe karşılık", text: $answer)
-                .textFieldStyle(.roundedBorder)
-                .submitLabel(.send)
-                .disabled(hasSubmitted)
-                .onSubmit { submit(answer) }
+            VStack(alignment: .leading, spacing: WDSpacing.sm) {
+                TextField("Türkçe karşılığını yaz…", text: $answer)
+                    .font(.wdBody)
+                    .padding(14)
+                    .background(
+                        Color.wdSurfaceSecondary,
+                        in: RoundedRectangle(cornerRadius: WDRadius.md, style: .continuous)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: WDRadius.md, style: .continuous)
+                            .strokeBorder(
+                                answerFocused ? Color.wdAccent : Color.wdSeparator.opacity(0.4),
+                                lineWidth: answerFocused ? 1.5 : 0.5
+                            )
+                    )
+                    .focused($answerFocused)
+                    .submitLabel(.send)
+                    .disabled(hasSubmitted)
+                    .onSubmit { submit(answer) }
 
-            PrimaryButton("Gönder") {
+                Text("Küçük yazım hataları sorun değil — rakibin değerlendirecek.")
+                    .font(.wdCaption)
+                    .foregroundStyle(Color.wdInkSecondary)
+            }
+
+            PrimaryButton("Gönder", systemImage: "paperplane.fill") {
                 submit(answer)
             }
             .disabled(hasSubmitted || answer.trimmingCharacters(in: .whitespaces).isEmpty)
+
+            Spacer()
         }
         .padding()
+        .background(Color.wdBackground)
+        .onAppear { answerFocused = true }
     }
 
     @ViewBuilder
@@ -42,28 +66,20 @@ struct AnsweringView: View {
             let remaining = countdown.remainingSeconds(now: context.date)
             let severity = countdown.severity(now: context.date)
 
-            Text(String(format: NSLocalizedString("match.timeLeft", comment: ""), remaining))
-                .font(.wdHeadline)
-                .monospacedDigit()
-                .foregroundStyle(color(for: severity))
-                .accessibilityLabel("Kalan süre \(remaining) saniye")
-                .sensoryFeedback(.warning, trigger: lastWarningTriggered)
-                .onChange(of: severity) { _, newSeverity in
-                    handleSeverityChange(newSeverity)
+            TimerRing(
+                progress: Double(remaining) / Double(max(1, durationSeconds)),
+                remainingSeconds: remaining,
+                isCritical: severity != .normal
+            )
+            .sensoryFeedback(.warning, trigger: lastWarningTriggered)
+            .onChange(of: severity) { _, newSeverity in
+                handleSeverityChange(newSeverity)
+            }
+            .onChange(of: remaining) { _, newRemaining in
+                if newRemaining == 0 && !hasSubmitted {
+                    submit("")
                 }
-                .onChange(of: remaining) { _, newRemaining in
-                    if newRemaining == 0 && !hasSubmitted {
-                        submit("")
-                    }
-                }
-        }
-    }
-
-    private func color(for severity: Countdown.Severity) -> Color {
-        switch severity {
-        case .normal: return .wdTimerNormal
-        case .warning: return .wdTimerCritical
-        case .expired: return .wdTimerCritical
+            }
         }
     }
 
