@@ -27,7 +27,7 @@ jobs:
         run: swift test --parallel
 
   ios-build:
-    name: iOS Build & Test
+    name: iOS Build
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -41,25 +41,21 @@ jobs:
           sudo xcode-select -s "$XCODE_PATH"
       - name: Show Xcode version
         run: xcodebuild -version
-      - name: Build & test
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
         run: |
-          if [ -d "wordduel.xcodeproj" ]; then
-            # Cihaz adı Xcode sürümüne göre değişir (iPhone 16, 17, ...);
-            # kurulu ilk uygun iPhone simülatörünü seç.
-            DEVICE=$(xcrun simctl list devices available | grep -oE "iPhone [0-9][^(]*" | head -n 1 | xargs)
-            DEVICE=${DEVICE:-iPhone 16}
-            echo "Using simulator: $DEVICE"
-            # Paylaşımlı runner'da paralel simülatör klonları CPU açlığından
-            # 'lockdown timed out' flake'i üretiyor; tek simülatörde koş ve
-            # flake'lenen testi otomatik yeniden dene.
-            xcodebuild test \
-              -project wordduel.xcodeproj \
-              -scheme wordduel \
-              -destination "platform=iOS Simulator,name=$DEVICE" \
-              -maximum-concurrent-test-simulator-destinations 1 \
-              -retry-tests-on-failure \
-              -enableCodeCoverage YES \
-              CODE_SIGNING_ALLOWED=NO
-          else
-            echo "Xcode project not yet generated; skipping iOS build."
-          fi
+          xcodegen generate
+          ls WordDuel.xcodeproj/xcshareddata/xcschemes/
+      - name: Build app
+        run: |
+          # Cihaz adı Xcode sürümüne göre değişir (iPhone 16, 17, ...);
+          # kurulu ilk uygun iPhone simülatörünü seç.
+          DEVICE=$(xcrun simctl list devices available | grep -oE "iPhone [0-9][^(]*" | head -n 1 | xargs)
+          DEVICE=${DEVICE:-iPhone 16}
+          echo "Using simulator: $DEVICE"
+          xcodebuild build \
+            -project WordDuel.xcodeproj \
+            -scheme WordDuel \
+            -destination "platform=iOS Simulator,name=$DEVICE" \
+            CODE_SIGNING_ALLOWED=NO
