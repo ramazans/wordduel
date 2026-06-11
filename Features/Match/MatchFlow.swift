@@ -161,18 +161,6 @@ struct MatchFlow {
         resolve(round, isCorrect: false)
     }
 
-    /// Davet kabul eden taraf, paylaşılan maç kaydı cihazına ulaştığında
-    /// guest koltuğunu kapar ve maçı başlatır.
-    static func claimGuestSeatIfNeeded(match: Match, me: Player, myAppleUserID: String) {
-        guard match.status == .pending,
-              match.guest == nil,
-              let host = match.host,
-              host.appleUserID != myAppleUserID,
-              me.appleUserID == myAppleUserID else { return }
-        match.guest = me
-        match.status = .active
-    }
-
     // MARK: - Çözümleme
 
     private func resolve(_ round: Round, isCorrect: Bool) {

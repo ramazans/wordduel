@@ -24,6 +24,8 @@ public final class HomeViewModel {
 
     /// CloudKit provisioning servis tarafında çalışır; SwiftData kaydı bu
     /// `@MainActor` view model'de yapılır (ModelContext actor sınırını geçmez).
+    /// Kayıt sonrası ilk durum revizyonu public DB'ye yayınlanır ki misafir
+    /// koda katıldığında maçı indirebilsin.
     public func createMatch(host: Player, modelContext: ModelContext) async {
         createState = .creating
         do {
@@ -36,6 +38,11 @@ public final class HomeViewModel {
                 modelContext.delete(match)
                 throw MatchSyncService.SyncError.matchPersistenceFailed(error.localizedDescription)
             }
+            await MatchCloudSync.push(
+                match,
+                repository: syncService.stateRepository,
+                context: modelContext
+            )
             createState = .created(code: provisioning.code, shareURL: provisioning.shareURL)
         } catch let error as MatchSyncService.SyncError {
             createState = .error(message(for: error))

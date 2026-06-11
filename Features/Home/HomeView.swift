@@ -49,12 +49,12 @@ struct HomeView: View {
                     if viewModel == nil {
                         viewModel = HomeViewModel(syncService: services.matchSyncService)
                     }
-                    claimGuestSeats()
+                    await pullRemoteUpdates()
                     await scheduleTurnNotifications()
                 }
                 .task {
                     for await _ in services.pushUpdates {
-                        claimGuestSeats()
+                        await pullRemoteUpdates()
                         await scheduleTurnNotifications()
                     }
                 }
@@ -84,7 +84,7 @@ struct HomeView: View {
             .padding(.bottom, WDSpacing.md)
         }
         .refreshable {
-            claimGuestSeats()
+            await pullRemoteUpdates()
             await scheduleTurnNotifications()
         }
     }
@@ -481,18 +481,12 @@ struct HomeView: View {
         return "Maç: \(opponentName) ile, tur \(match.currentRoundIndex + 1) / \(match.totalRounds), skor \(stats.myScore(in: match)) - \(stats.opponentScore(in: match))\(turnNote)"
     }
 
-    /// Davet kabulünden sonra paylaşılan maç kaydı cihaza ulaştığında
-    /// guest koltuğunu kapar; maç iki tarafta da aktifleşir.
-    private func claimGuestSeats() {
-        guard let myID = myAppleUserID(), let me else { return }
-        var claimed = false
-        for match in matches where match.status == .pending {
-            let before = match.status
-            MatchFlow.claimGuestSeatIfNeeded(match: match, me: me, myAppleUserID: myID)
-            if match.status != before { claimed = true }
-        }
-        if claimed {
-            try? modelContext.save()
+    /// Bitmemiş maçların uzak revizyonlarını indirir (misafir katılımı,
+    /// rakibin hamleleri). Maç ekranı açıkken ayrıca kendi polling'i çalışır.
+    private func pullRemoteUpdates() async {
+        let repository = services.matchSyncService.stateRepository
+        for match in matches where match.status != .finished {
+            await MatchCloudSync.pull(match, repository: repository, context: modelContext)
         }
     }
 

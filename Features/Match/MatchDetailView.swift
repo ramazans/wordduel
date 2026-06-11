@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import CoreModels
 import AuthService
+import CloudKitService
 import MatchEngine
 import DesignSystem
 
@@ -10,6 +11,7 @@ import DesignSystem
 struct MatchDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AuthController.self) private var authController
+    @Environment(AppServices.self) private var services
     @Environment(\.dismiss) private var dismiss
 
     let match: Match
@@ -48,6 +50,18 @@ struct MatchDetailView: View {
             }
         }
         .animation(.snappy, value: flow.phase)
+        .task(id: match.code) {
+            // Karşı tarafın hamleleri public DB'deki revizyon zincirinden gelir;
+            // ekran açıkken kısa aralıkla yokla.
+            while !Task.isCancelled {
+                await MatchCloudSync.pull(
+                    match,
+                    repository: services.matchSyncService.stateRepository,
+                    context: modelContext
+                )
+                try? await Task.sleep(for: .seconds(3))
+            }
+        }
     }
 
     // MARK: - Faz içeriği
@@ -340,8 +354,16 @@ struct MatchDetailView: View {
 
     private var opponent: Player? { stats.opponent(in: match) }
 
+    /// Yerel mutasyonu kaydeder ve rakibin görmesi için yeni revizyon olarak yayınlar.
     private func save() {
         try? modelContext.save()
+        Task {
+            await MatchCloudSync.push(
+                match,
+                repository: services.matchSyncService.stateRepository,
+                context: modelContext
+            )
+        }
     }
 }
 
