@@ -9,7 +9,7 @@ Apple'ın istediği gibi gri tonlamalı (siyah zemin, beyaz figür).
 from PIL import Image, ImageDraw
 
 S = 1024
-OUT = "wordduel/Assets.xcassets/AppIcon.appiconset"
+OUT = "App/Resources/Assets.xcassets/AppIcon.appiconset"
 
 CORAL_TOP = (255, 56, 92)      # FF385C
 CORAL_BOTTOM = (215, 4, 102)   # D70466
@@ -77,12 +77,3 @@ def make(name, bg_top, bg_bottom, bubble, line):
 light = make("AppIcon.png", CORAL_TOP, CORAL_BOTTOM, WHITE, CORAL_LINE)
 make("AppIcon-Dark.png", DARK_BG_TOP, DARK_BG_BOTTOM, DARK_BUBBLE, DARK_BG_BOTTOM)
 make("AppIcon-Tinted.png", BLACK, BLACK, WHITE, BLACK)
-
-# Mac boyutları (açık varyanttan küçültme)
-for size in (16, 32, 128, 256, 512):
-    for scale in (1, 2):
-        px = size * scale
-        suffix = "@2x" if scale == 2 else ""
-        fname = f"AppIcon-mac-{size}{suffix}.png"
-        light.convert("RGB").resize((px, px), Image.LANCZOS).save(f"{OUT}/{fname}", "PNG")
-        print(f"yazıldı: {fname}")
