@@ -3,10 +3,10 @@ import SwiftData
 
 @Model
 public final class WordEntry {
-    @Attribute(.unique) public var text: String
-    public var definition: String
-    public var levelRaw: String
-    public var language: String
+    public var text: String = ""
+    public var definition: String = ""
+    public var levelRaw: String = "b1"
+    public var language: String = "en"
 
     public var level: CEFRLevel {
         get { CEFRLevel(rawValue: levelRaw) ?? .b1 }

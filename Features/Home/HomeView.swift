@@ -455,7 +455,7 @@ struct HomeView: View {
     }
 
     private func currentRound(of match: Match) -> Round? {
-        match.rounds.first { $0.index == match.currentRoundIndex }
+        (match.rounds ?? []).first { $0.index == match.currentRoundIndex }
     }
 
     /// Faza göre aksiyon bende mi: kelime seçme, cevaplama veya değerlendirme.

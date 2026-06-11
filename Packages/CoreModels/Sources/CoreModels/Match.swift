@@ -3,24 +3,24 @@ import SwiftData
 
 @Model
 public final class Match {
-    @Attribute(.unique) public var code: String
-    public var statusRaw: String
-    public var totalRounds: Int
-    public var repeatInterval: Int
-    public var currentRoundIndex: Int
-    public var hostScore: Int
-    public var guestScore: Int
-    public var roundTimerSeconds: Int
-    public var createdAt: Date
+    public var code: String = ""
+    public var statusRaw: String = "pending"
+    public var totalRounds: Int = 10
+    public var repeatInterval: Int = 3
+    public var currentRoundIndex: Int = 0
+    public var hostScore: Int = 0
+    public var guestScore: Int = 0
+    public var roundTimerSeconds: Int = 30
+    public var createdAt: Date = Date()
     public var finishedAt: Date?
 
     public var host: Player?
     public var guest: Player?
 
     @Relationship(deleteRule: .cascade, inverse: \Round.match)
-    public var rounds: [Round] = []
+    public var rounds: [Round]? = nil
 
-    public var pendingRepeatsData: Data
+    public var pendingRepeatsData: Data = Data()
 
     public var status: MatchStatus {
         get { MatchStatus(rawValue: statusRaw) ?? .pending }
@@ -29,10 +29,11 @@ public final class Match {
 
     public var pendingRepeats: [PendingRepeatItem] {
         get {
-            (try? JSONDecoder().decode([PendingRepeatItem].self, from: pendingRepeatsData)) ?? []
+            guard !pendingRepeatsData.isEmpty else { return [] }
+            return (try? JSONDecoder().decode([PendingRepeatItem].self, from: pendingRepeatsData)) ?? []
         }
         set {
-            pendingRepeatsData = (try? JSONEncoder().encode(newValue)) ?? Data("[]".utf8)
+            pendingRepeatsData = (try? JSONEncoder().encode(newValue)) ?? Data()
         }
     }
 
@@ -53,6 +54,6 @@ public final class Match {
         self.roundTimerSeconds = roundTimerSeconds
         self.createdAt = .now
         self.host = host
-        self.pendingRepeatsData = Data("[]".utf8)
+        self.pendingRepeatsData = Data()
     }
 }

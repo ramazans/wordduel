@@ -22,11 +22,21 @@ public final class HomeViewModel {
         self.syncService = syncService
     }
 
+    /// CloudKit provisioning servis tarafında çalışır; SwiftData kaydı bu
+    /// `@MainActor` view model'de yapılır (ModelContext actor sınırını geçmez).
     public func createMatch(host: Player, modelContext: ModelContext) async {
         createState = .creating
         do {
-            let result = try await syncService.createMatch(host: host, modelContext: modelContext)
-            createState = .created(code: result.code, shareURL: result.shareURL)
+            let provisioning = try await syncService.provisionMatch()
+            let match = Match(code: provisioning.code, host: host)
+            modelContext.insert(match)
+            do {
+                try modelContext.save()
+            } catch {
+                modelContext.delete(match)
+                throw MatchSyncService.SyncError.matchPersistenceFailed(error.localizedDescription)
+            }
+            createState = .created(code: provisioning.code, shareURL: provisioning.shareURL)
         } catch let error as MatchSyncService.SyncError {
             createState = .error(message(for: error))
         } catch {

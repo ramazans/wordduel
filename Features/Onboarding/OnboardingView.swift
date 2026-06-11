@@ -8,6 +8,7 @@ import DesignSystem
 struct OnboardingView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AuthController.self) private var authController
+    @Environment(AppServices.self) private var services
     @State private var viewModel: SignInViewModel?
     @State private var page = 0
 
@@ -53,7 +54,10 @@ struct OnboardingView: View {
                     cloudKitAccount: CloudKitAccount(containerIdentifier: AppConstants.cloudKitContainerID)
                 )
             }
-            await viewModel?.refreshCloudKitAvailability()
+            // Container kayıtlı değilse log spam'ini önlemek için kontrolü atla.
+            if services.cloudKitEnabled {
+                await viewModel?.refreshCloudKitAvailability()
+            }
         }
     }
 
@@ -91,7 +95,11 @@ struct OnboardingView: View {
 
     @ViewBuilder
     private var footer: some View {
-        if let vm = viewModel, !vm.iCloudAvailability.isAvailable {
+        // Uyarı bilgilendirir ama girişi engellemez — availability kontrolü
+        // best-effort, `.couldNotDetermine` durumunda hiç gösterilmez.
+        if let vm = viewModel,
+           !vm.iCloudAvailability.isAvailable,
+           vm.iCloudAvailability != .couldNotDetermine {
             HStack(spacing: WDSpacing.sm) {
                 Image(systemName: "exclamationmark.icloud.fill")
                     .foregroundStyle(Color.wdWarning)
@@ -117,9 +125,12 @@ struct OnboardingView: View {
         .signInWithAppleButtonStyle(.black)
         .frame(height: 52)
         .clipShape(RoundedRectangle(cornerRadius: WDRadius.md, style: .continuous))
-        .disabled(viewModel?.iCloudAvailability.isAvailable != true)
         .padding(.horizontal)
-        .padding(.bottom, WDSpacing.md)
+        .padding(.bottom, WDSpacing.sm)
+
+        #if DEBUG
+        debugTestUserSection
+        #endif
 
         if case .signingIn = authController.phase {
             ProgressView()
@@ -135,6 +146,31 @@ struct OnboardingView: View {
                 .padding(.bottom, WDSpacing.sm)
         }
     }
+
+    #if DEBUG
+    /// Çoklu simülatör testinde Apple Sign In olmadan hızlı giriş.
+    @ViewBuilder
+    private var debugTestUserSection: some View {
+        VStack(spacing: WDSpacing.sm) {
+            Text("DEBUG — Test Kullanıcısı")
+                .font(.caption2)
+                .foregroundStyle(Color.wdInkSecondary)
+            HStack(spacing: WDSpacing.sm) {
+                ForEach(["Alice", "Bob", "Cem"], id: \.self) { name in
+                    Button(name) {
+                        authController.signInAsTestUser(
+                            userID: name.lowercased(),
+                            displayName: name,
+                            modelContext: modelContext
+                        )
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+        }
+        .padding(.bottom, WDSpacing.sm)
+    }
+    #endif
 
     @ViewBuilder
     private func onboardingPage(title: String, subtitle: String, systemImage: String) -> some View {

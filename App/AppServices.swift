@@ -10,12 +10,14 @@ public final class AppServices {
     public let matchSyncService: MatchSyncService
     public let subscriptionManager: SubscriptionManager
     public let notificationScheduler: LocalNotificationScheduler
+    public let cloudKitEnabled: Bool
 
     /// Push'tan gelen güncellemeleri view'lar bu stream'i dinleyebilir.
     public let pushUpdates: AsyncStream<PushNotificationHandler.Outcome>
     private let pushContinuation: AsyncStream<PushNotificationHandler.Outcome>.Continuation
 
-    public init(cloudKitContainerID: String) {
+    public init(cloudKitContainerID: String, cloudKitEnabled: Bool) {
+        self.cloudKitEnabled = cloudKitEnabled
         let container = CKContainer(identifier: cloudKitContainerID)
         self.matchSyncService = MatchSyncService(containerIdentifier: cloudKitContainerID)
         self.subscriptionManager = SubscriptionManager(container: container)
@@ -26,13 +28,12 @@ public final class AppServices {
         self.pushContinuation = continuation
     }
 
-    /// AppDelegate'in çağıracağı sink — push event'i AsyncStream'e iletir.
     public func handlePushOutcome(_ outcome: PushNotificationHandler.Outcome) {
         pushContinuation.yield(outcome)
     }
 
-    /// Uygulama açılışında (auth sonrası) çağrılır.
     public func bootstrap() async {
+        guard cloudKitEnabled else { return }
         do {
             try await subscriptionManager.ensureRegistered()
         } catch {
