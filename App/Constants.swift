@@ -6,10 +6,11 @@ public enum AppConstants {
     /// listesine bu ID eklenmeli, böylece Apple Developer Portal'da kaydolur.
     public static let cloudKitContainerID = "iCloud.club.kadro.wordduel"
 
-    /// CloudKit sync'i aç/kapat.
-    /// Container Apple Developer'da kaydolmadıysa `false` bırak — "Bad Container"
-    /// log spam'ini önler ve uygulama yine local SwiftData ile çalışır.
-    /// Container kaydolunca `true` yap, gerçek sync devreye girer.
+    /// SwiftData'nın CloudKit aynasını (private DB yedekleme) aç/kapat.
+    /// MAÇ SENKRONU BU BAYRAKTAN BAĞIMSIZDIR: oyun durumu public DB'deki
+    /// `MatchState` revizyon zinciri üzerinden taşınır (MatchCloudSync).
+    /// Bu bayrak yalnızca kişisel verinin iCloud'a aynalanmasını kontrol
+    /// eder; kapalıyken de iki cihaz arası oyun çalışır.
     public static let cloudKitEnabled = false
 
     public static let appleUserIDStorageKey = "wordduel.appleUserID"

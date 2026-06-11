@@ -43,16 +43,24 @@ wordduel/
 
 ## Maç Akışı (Mimari)
 
-Maç durumu SwiftData'da yaşar ve CloudKit (`CKShare`) üzerinden iki cihaza senkronize olur; ayrı bir "oyun sunucusu" yoktur.
+Maç durumu SwiftData'da yaşar; cihazlar arası taşıma CloudKit **public DB**'deki append-only revizyon zinciriyle yapılır. Ayrı bir "oyun sunucusu" yoktur.
 
 - **`MatchEngine`** (paket): kuralların saf, test edilebilir referansı.
 - **`Features/Match/MatchFlow.swift`**: aynı kuralları kalıcı `Match`/`Round` modeline uygulayan akış katmanı — tur oluşturma, `AnswerNormalizer` ile otomatik karar, 2→4→8 puanlama, tekrar kuyruğu (`Match.pendingRepeats`), maç bitişi.
 - **`MatchDetailView`**: faza göre ekran seçer — kelime seçme (`AskingView`, tekrar kuyruğu bölümüyle), cevaplama (`AnsweringView`, 30 sn halka sayaç), manuel değerlendirme (`ReviewAnswerView`), bekleme durumları ve skor tablosu (`ScoreboardView`).
 - Tur sırası: çift indeksli turları **host**, tekleri **guest** sorar.
-- Davet kabulünde paylaşılan kayıt cihaza ulaşınca guest koltuğu `MatchFlow.claimGuestSeatIfNeeded` ile kapılır ve maç aktifleşir.
 - Cevaplayanın cihazı kapalıysa: süre + 10 sn pay dolduktan sonra asker turu tek taraflı kapatabilir.
 
-**Bilinen sınırlama (cihazda doğrulanacak):** `Match.guest` ilişkisi, guest'in kendi private DB'sindeki `Player` kaydına bağlanır; CKShare zone'ları arası ilişki davranışı Mac/cihaz üzerinde test edilip gerekirse `guestAppleUserID` alanına geçilmelidir (`MatchSyncService` içindeki CKShare notlarıyla birlikte).
+### Senkronizasyon (`MatchCloudSync` + `MatchStateRepository`)
+
+CKShare/paylaşılan zone **kullanılmaz** — SwiftData'nın CloudKit aynası paylaşılan zone'ları desteklemediği için o yol çıkmazdır. Bunun yerine:
+
+1. Her mutasyon (kelime sorma, cevap, değerlendirme, katılım) maçın **tam durumunu** (`MatchStateSnapshot`, JSON) public DB'ye `state-<kod>-<revizyon>` adlı **yeni** bir `MatchState` kaydı olarak yazar (append-only; mevcut kayıt asla güncellenmez — public DB'nin "yalnızca oluşturan günceller" kuralına takılmaz).
+2. Karşı cihaz `revizyon+1` kaydını adıyla fetch eder (sorgu/indeks gerekmez), varsa uygular; maç ekranı açıkken 3 sn'de bir, Home'da açılış/yenilemede yoklanır.
+3. Disiplin: her cihaz yalnızca **kendi aksiyonunu** push'lar; turn-based akışta yazma çakışması pratikte oluşmaz, oluşursa aynı revizyon adı ikinci yazana hata döndürür ve pull ile uzlaşılır.
+4. Katılım: kod doğrulanınca misafir zinciri indirir (`materialize`), koltuğu kapar, `active` durumu push'lar; host'un yoklaması maçı başlatır.
+
+`AppConstants.cloudKitEnabled` yalnızca SwiftData'nın private-DB aynasını kontrol eder; maç senkronu bu bayraktan bağımsız çalışır.
 
 ## Tasarım Sistemi
 
@@ -120,8 +128,21 @@ Faz 4 için CloudKit Dashboard → Development environment'ta şu record type'la
 | `createdAt` | Date/Time | Sortable | |
 | `expiresAt` | Date/Time | — | TTL — 7 gün varsayılan |
 
-> **Önemli**: `MatchInvite` kodları opaque shareURL'i lookup edilebilir hale getirir.
-> Kayıt içeriği yalnızca paylaşım meta verisidir; oyun verisi (kelime, skor) burada yok.
+> **Önemli**: `MatchInvite` yalnızca kod → maç eşlemesidir; oyun verisi `MatchState`'te yaşar.
+
+### Public DB — `MatchState`
+
+| Field | Type | Indexed | Notes |
+|---|---|---|---|
+| `code` | String | — | 6 haneli maç kodu |
+| `revision` | Int64 | — | Append-only revizyon numarası |
+| `payload` | Bytes | — | `MatchStateSnapshot` JSON'u |
+| `createdAt` | Date/Time | — | |
+
+> Kayıt adı deterministiktir: `state-<kod>-<revizyon>`. Okuma her zaman kayıt
+> adıyla fetch olduğu için **hiçbir alanda sorgu indeksi gerekmez** —
+> Development ortamında ilk push şemayı otomatik oluşturur, production'a
+> deploy etmek yeterlidir.
 
 ### Private DB — SwiftData @Model'lar
 

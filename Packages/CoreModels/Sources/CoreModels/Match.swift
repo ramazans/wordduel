@@ -22,6 +22,11 @@ public final class Match {
 
     public var pendingRepeatsData: Data = Data()
 
+    /// Cihazlar arası senkronda uygulanan son durum revizyonu.
+    /// Her yerel mutasyon push'ta +1 artar; pull yalnızca daha yüksek
+    /// revizyonlu uzak durumu uygular.
+    public var syncRevision: Int = 0
+
     public var status: MatchStatus {
         get { MatchStatus(rawValue: statusRaw) ?? .pending }
         set { statusRaw = newValue.rawValue }
