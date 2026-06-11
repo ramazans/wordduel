@@ -40,12 +40,17 @@ struct MatchFlow {
 
     // MARK: - Durum okuma
 
+    /// CloudKit uyumu için ilişki opsiyonel — okuma tarafında boş diziye düşer.
+    private var rounds: [Round] {
+        match.rounds ?? []
+    }
+
     var currentRound: Round? {
-        match.rounds.first { $0.index == match.currentRoundIndex }
+        rounds.first { $0.index == match.currentRoundIndex }
     }
 
     var lastResolvedRound: Round? {
-        match.rounds
+        rounds
             .filter { $0.judgement != .pendingReview }
             .max { ($0.resolvedAt ?? .distantPast) < ($1.resolvedAt ?? .distantPast) }
     }
@@ -85,7 +90,7 @@ struct MatchFlow {
     }
 
     private func originRound(forWord word: String) -> Round? {
-        match.rounds
+        rounds
             .filter { $0.word == word }
             .max { $0.index < $1.index }
     }
@@ -101,7 +106,7 @@ struct MatchFlow {
             expectedAnswer: expectedAnswer
         )
         round.startedAt = .now
-        match.rounds.append(round)
+        match.rounds = rounds + [round]
     }
 
     func askRepeat(_ item: PendingRepeatItem, asker: AskerRole) {
@@ -115,7 +120,7 @@ struct MatchFlow {
             originRoundIndex: originRound(forWord: item.word)?.index
         )
         round.startedAt = .now
-        match.rounds.append(round)
+        match.rounds = rounds + [round]
     }
 
     /// Cevabı işler. Boş cevap = süre doldu / bilmiyorum → yanlış.

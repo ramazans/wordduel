@@ -18,7 +18,12 @@ public enum SeedLoader {
         case decodeFailed(Error)
     }
 
-    public static func load(from bundle: Bundle = .module) throws -> [SeedWord] {
+    /// Paketin gömülü `SeedWords.json` dosyasını yükler.
+    public static func load() throws -> [SeedWord] {
+        try load(from: .module)
+    }
+
+    public static func load(from bundle: Bundle) throws -> [SeedWord] {
         guard let url = bundle.url(forResource: "SeedWords", withExtension: "json") else {
             throw LoadError.resourceNotFound
         }

@@ -1,4 +1,6 @@
-# Xcode
+# Xcode — XcodeGen generates the project; do not commit it.
+*.xcodeproj/
+*.xcworkspace/
 build/
 DerivedData/
 *.pbxuser
@@ -12,9 +14,6 @@ DerivedData/
 xcuserdata/
 *.xccheckout
 *.xcscmblueprint
-*.xcworkspace/xcuserdata/
-*.xcodeproj/xcuserdata/
-*.xcodeproj/project.xcworkspace/xcuserdata/
 
 # Swift Package Manager
 .build/
