@@ -153,7 +153,7 @@ public struct MatchStateSnapshot: Codable, Sendable {
         )
         descriptor.fetchLimit = 1
 
-        if let existing = try? context.fetch(descriptor).first, let existing {
+        if let existing = try? context.fetch(descriptor).first {
             if existing.displayName.isEmpty, !snapshot.displayName.isEmpty {
                 existing.displayName = snapshot.displayName
             }
