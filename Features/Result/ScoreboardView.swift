@@ -26,6 +26,18 @@ struct ScoreboardView: View {
 
     enum Winner { case host, guest, tie }
 
+    enum LocalOutcome { case won, lost, tie }
+
+    /// Bu cihazdaki oyuncunun maç sonucu — kutlama sesi ve konfeti buna göre seçilir.
+    private var localOutcome: LocalOutcome? {
+        guard let myRole else { return nil }
+        switch winner {
+        case .tie: return .tie
+        case .host: return myRole == .host ? .won : .lost
+        case .guest: return myRole == .guest ? .won : .lost
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: WDSpacing.lg) {
@@ -48,6 +60,12 @@ struct ScoreboardView: View {
             .padding()
         }
         .background(celebrationBackground)
+        .overlay {
+            if localOutcome == .won {
+                ConfettiView()
+                    .ignoresSafeArea()
+            }
+        }
         .onAppear {
             withAnimation(.spring(duration: 0.6).delay(0.2)) {
                 hasAppeared = true
@@ -56,6 +74,16 @@ struct ScoreboardView: View {
                 displayedHostScore = hostScore
                 displayedGuestScore = guestScore
             }
+            playOutcomeSound()
+        }
+    }
+
+    private func playOutcomeSound() {
+        switch localOutcome {
+        case .won: SoundPlayer.shared.play(.victory)
+        case .lost: SoundPlayer.shared.play(.defeat)
+        case .tie: SoundPlayer.shared.play(.tie)
+        case nil: break
         }
     }
 
@@ -320,6 +348,7 @@ struct ScoreboardView: View {
         guestName: "Ayşe",
         hostScore: 6,
         guestScore: 6,
+        myRole: .host,
         onPlayAgain: {},
         onHome: {}
     )

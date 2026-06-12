@@ -51,7 +51,14 @@ struct MatchDetailView: View {
             }
         }
         .animation(.snappy, value: flow.phase)
+        .onChange(of: lastResolutionKey) { _, _ in
+            // Tur kapanışı iki cihazda da burada duyulur: lokal karar anında,
+            // rakibin kararı CloudKit senkronu görünümü tazelediğinde.
+            guard let last = flow.lastResolvedRound, flow.phase != .finished else { return }
+            SoundPlayer.shared.play(last.judgement == .correct ? .correct : .wrong)
+        }
         .task(id: match.code) {
+            SoundPlayer.shared.preload()
             // Karşı tarafın hamleleri public DB'deki revizyon zincirinden gelir;
             // ekran açıkken kısa aralıkla yokla.
             while !Task.isCancelled {
@@ -81,10 +88,12 @@ struct MatchDetailView: View {
                     dueRepeats: flow.dueRepeats(for: asker),
                     onAsk: { word, expected in
                         flow.askWord(word, expectedAnswer: expected, asker: asker)
+                        SoundPlayer.shared.play(.send)
                         save()
                     },
                     onAskRepeat: { item in
                         flow.askRepeat(item, asker: asker)
+                        SoundPlayer.shared.play(.send)
                         save()
                     }
                 )
@@ -339,6 +348,11 @@ struct MatchDetailView: View {
     // MARK: - Yardımcılar
 
     private var flow: MatchFlow { MatchFlow(match: match) }
+
+    /// Son çözülen turun kimliği — değiştiğinde tur sonucu sesi tetiklenir.
+    private var lastResolutionKey: String? {
+        flow.lastResolvedRound.map { "\($0.index)-\($0.judgement.rawValue)" }
+    }
 
     private var stats: MatchStats { MatchStats(myAppleUserID: myAppleUserID) }
 
