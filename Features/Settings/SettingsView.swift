@@ -10,6 +10,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AppServices.self) private var services
     @Environment(AuthController.self) private var authController
+    @Query private var players: [Player]
     @AppStorage("language") private var language: String = L10n.Language.system.rawValue
     @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
     @State private var notificationStatus: LocalNotificationScheduler.AuthorizationStatus = .notDetermined
@@ -18,6 +19,58 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            if let me {
+                @Bindable var player = me
+                Section {
+                    HStack(spacing: 12) {
+                        AvatarView(name: player.displayName, colorIndex: player.avatarColor, size: 48)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Görünen Ad")
+                                .font(.wdCaption)
+                                .foregroundStyle(Color.wdInkSecondary)
+                            TextField("Adını gir", text: $player.displayName)
+                                .font(.wdHeadline)
+                                .foregroundStyle(Color.wdInk)
+                                .submitLabel(.done)
+                        }
+                    }
+                    .padding(.vertical, 4)
+
+                    VStack(alignment: .leading, spacing: WDSpacing.sm) {
+                        Label("Avatar Rengi", systemImage: "paintpalette.fill")
+                            .font(.wdCaption)
+                            .foregroundStyle(Color.wdInkSecondary)
+                        HStack(spacing: WDSpacing.sm) {
+                            ForEach(0..<AvatarPalette.colors.count, id: \.self) { i in
+                                Button {
+                                    player.avatarColor = i
+                                } label: {
+                                    Circle()
+                                        .fill(AvatarPalette.colors[i])
+                                        .frame(width: 32, height: 32)
+                                        .overlay {
+                                            if player.avatarColor == i {
+                                                Circle()
+                                                    .strokeBorder(.white, lineWidth: 2.5)
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 12, weight: .bold))
+                                                    .foregroundStyle(.white)
+                                            }
+                                        }
+                                        .shadow(color: AvatarPalette.colors[i].opacity(0.4), radius: 4, x: 0, y: 2)
+                                }
+                                .buttonStyle(.plain)
+                                .animation(.spring(duration: 0.2), value: player.avatarColor)
+                            }
+                            Spacer()
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } header: {
+                    Text("Profil")
+                }
+            }
+
             Section("Dil") {
                 Picker(selection: $language) {
                     ForEach(L10n.Language.allCases, id: \.rawValue) { lang in
@@ -109,6 +162,16 @@ struct SettingsView: View {
         } message: {
             Text("Tüm maçların ve geçmişin kalıcı olarak silinecek.")
         }
+    }
+
+    private var me: Player? {
+        guard let myAppleUserID else { return players.first }
+        return players.first { $0.appleUserID == myAppleUserID }
+    }
+
+    private var myAppleUserID: String? {
+        if case .signedIn(let id) = authController.phase { return id }
+        return nil
     }
 
     /// Yerel + senkronize verileri siler ve oturumu kapatır. SwiftData'nın
