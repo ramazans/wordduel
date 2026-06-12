@@ -329,11 +329,12 @@ struct HomeView: View {
         .accessibilityLabel(rowAccessibilityLabel(for: match, isMyTurn: isMyTurn))
     }
 
-    /// Rakibin katılmasını bekleyen maç — dokununca kodu yeniden paylaşır.
+    /// Rakibin katılmasını bekleyen maç — sola kaydırınca sil, dokununca kodu yeniden paylaşır.
     private func pendingCard(_ match: Match) -> some View {
-        Button {
-            reinvite = ReinviteCode(code: match.code)
-        } label: {
+        SwipeToDeleteCard(
+            onTap: { reinvite = ReinviteCode(code: match.code) },
+            onDelete: { deletePendingMatch(match) }
+        ) {
             HStack(spacing: WDSpacing.md) {
                 Image(systemName: "hourglass")
                     .font(.title3)
@@ -357,8 +358,12 @@ struct HomeView: View {
             }
             .wdCard()
         }
-        .buttonStyle(WDPressableButtonStyle())
-        .accessibilityLabel("Rakip bekleniyor, kod \(match.code.map(String.init).joined(separator: " ")), paylaşmak için dokun")
+        .accessibilityLabel("Rakip bekleniyor, kod \(match.code.map(String.init).joined(separator: " ")), sola kaydırarak sil")
+    }
+
+    private func deletePendingMatch(_ match: Match) {
+        modelContext.delete(match)
+        try? modelContext.save()
     }
 
     private var actionBar: some View {
@@ -510,6 +515,70 @@ struct HomeView: View {
         for match in active where !match.isMyTurnToAnswer {
             await services.notificationScheduler.cancel(matchCode: match.code)
         }
+    }
+}
+
+// MARK: - Swipe to Delete
+
+/// Sola kaydırma ile arkasında "Sil" butonu açan sarmalayıcı kart.
+private struct SwipeToDeleteCard<Content: View>: View {
+    let content: () -> Content
+    let onTap: () -> Void
+    let onDelete: () -> Void
+
+    @State private var offset: CGFloat = 0
+    @State private var baseOffset: CGFloat = 0
+    private let revealWidth: CGFloat = 80
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { offset = 0 }
+                baseOffset = 0
+                onDelete()
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 18, weight: .semibold))
+                    Text("Sil")
+                        .font(.caption.weight(.semibold))
+                }
+                .foregroundStyle(.white)
+                .frame(width: revealWidth)
+                .frame(maxHeight: .infinity)
+            }
+            .background(Color.wdDanger, in: RoundedRectangle(cornerRadius: WDRadius.lg, style: .continuous))
+
+            content()
+                .offset(x: offset)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if offset < 0 {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { offset = 0 }
+                        baseOffset = 0
+                    } else {
+                        onTap()
+                    }
+                }
+                .gesture(
+                    DragGesture(minimumDistance: 10)
+                        .onChanged { value in
+                            let dx = value.translation.width
+                            let dy = value.translation.height
+                            guard abs(dx) > abs(dy) else { return }
+                            offset = max(-revealWidth, min(0, baseOffset + dx))
+                        }
+                        .onEnded { value in
+                            let shouldOpen = offset < -(revealWidth / 2)
+                            let target: CGFloat = shouldOpen ? -revealWidth : 0
+                            baseOffset = target
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                offset = target
+                            }
+                        }
+                )
+        }
+        .clipped()
     }
 }
 
