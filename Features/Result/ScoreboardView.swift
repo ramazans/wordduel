@@ -6,6 +6,8 @@ struct ScoreboardView: View {
     let guestName: String
     let hostScore: Int
     let guestScore: Int
+    /// Bu cihazdaki oyuncunun maç sonucu — kutlama sesi ve konfeti buna göre seçilir.
+    var localOutcome: LocalOutcome?
     let onPlayAgain: () -> Void
     let onHome: () -> Void
 
@@ -20,6 +22,8 @@ struct ScoreboardView: View {
     }
 
     enum Winner { case host, guest, tie }
+
+    enum LocalOutcome { case won, lost, tie }
 
     var body: some View {
         VStack(spacing: WDSpacing.xl) {
@@ -88,6 +92,12 @@ struct ScoreboardView: View {
         }
         .padding()
         .background(celebrationBackground)
+        .overlay {
+            if localOutcome == .won {
+                ConfettiView()
+                    .ignoresSafeArea()
+            }
+        }
         .accessibilityLabel(scoreboardAccessibilityLabel)
         .onAppear {
             withAnimation(.spring(duration: 0.6).delay(0.2)) {
@@ -97,6 +107,16 @@ struct ScoreboardView: View {
                 displayedHostScore = hostScore
                 displayedGuestScore = guestScore
             }
+            playOutcomeSound()
+        }
+    }
+
+    private func playOutcomeSound() {
+        switch localOutcome {
+        case .won: SoundPlayer.shared.play(.victory)
+        case .lost: SoundPlayer.shared.play(.defeat)
+        case .tie: SoundPlayer.shared.play(.tie)
+        case nil: break
         }
     }
 
@@ -178,6 +198,7 @@ struct ScoreboardView: View {
         guestName: "Ayşe",
         hostScore: 14,
         guestScore: 8,
+        localOutcome: .won,
         onPlayAgain: {},
         onHome: {}
     )
@@ -189,6 +210,7 @@ struct ScoreboardView: View {
         guestName: "Ayşe",
         hostScore: 6,
         guestScore: 6,
+        localOutcome: .tie,
         onPlayAgain: {},
         onHome: {}
     )

@@ -13,6 +13,7 @@ struct SettingsView: View {
     @Query private var players: [Player]
     @AppStorage("language") private var language: String = L10n.Language.system.rawValue
     @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
+    @AppStorage("soundEffectsEnabled") private var soundEffectsEnabled: Bool = true
     @State private var notificationStatus: LocalNotificationScheduler.AuthorizationStatus = .notDetermined
     @State private var showSignOutConfirm = false
     @State private var showDeleteConfirm = false
@@ -80,6 +81,16 @@ struct SettingsView: View {
                     settingsLabel("Dil", systemImage: "globe", tint: .blue)
                 }
                 .pickerStyle(.menu)
+            }
+
+            Section {
+                Toggle(isOn: $soundEffectsEnabled) {
+                    settingsLabel("Ses efektleri", systemImage: "speaker.wave.2.fill", tint: .purple)
+                }
+            } header: {
+                Text("Ses")
+            } footer: {
+                Text("Geri sayım, tur sonucu ve maç sonu kutlama sesleri. Sessiz moddayken sesler çalmaz.")
             }
 
             Section {

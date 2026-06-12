@@ -76,8 +76,12 @@ struct AnsweringView: View {
                 handleSeverityChange(newSeverity)
             }
             .onChange(of: remaining) { _, newRemaining in
-                if newRemaining == 0 && !hasSubmitted {
+                guard !hasSubmitted else { return }
+                if newRemaining == 0 {
+                    SoundPlayer.shared.play(.timeUp)
                     submit("")
+                } else if newRemaining <= 10 {
+                    SoundPlayer.shared.play(.tick)
                 }
             }
         }
@@ -92,6 +96,9 @@ struct AnsweringView: View {
     private func submit(_ value: String) {
         guard !hasSubmitted else { return }
         hasSubmitted = true
+        if !value.trimmingCharacters(in: .whitespaces).isEmpty {
+            SoundPlayer.shared.play(.send)
+        }
         onSubmit(value)
     }
 }
