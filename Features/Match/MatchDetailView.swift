@@ -25,14 +25,14 @@ struct MatchDetailView: View {
                     guestName: match.guest?.displayName ?? "Misafir",
                     hostScore: match.hostScore,
                     guestScore: match.guestScore,
-                    localOutcome: scoreboardOutcome,
+                    rounds: match.rounds ?? [],
+                    myRole: myRole,
                     onPlayAgain: {
                         dismiss()
                         onPlayAgain()
                     },
                     onHome: { dismiss() }
                 )
-                .navigationBarBackButtonHidden()
             } else {
                 VStack(spacing: WDSpacing.md) {
                     scoreHeader
@@ -352,14 +352,6 @@ struct MatchDetailView: View {
     /// Son çözülen turun kimliği — değiştiğinde tur sonucu sesi tetiklenir.
     private var lastResolutionKey: String? {
         flow.lastResolvedRound.map { "\($0.index)-\($0.judgement.rawValue)" }
-    }
-
-    private var scoreboardOutcome: ScoreboardView.LocalOutcome {
-        switch stats.outcome(of: match) {
-        case .win: .won
-        case .loss: .lost
-        case .draw: .tie
-        }
     }
 
     private var stats: MatchStats { MatchStats(myAppleUserID: myAppleUserID) }
