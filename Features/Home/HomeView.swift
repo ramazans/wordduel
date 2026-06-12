@@ -528,9 +528,9 @@ struct HomeView: View {
 
 /// Sola kaydırma ile arkasında "Sil" butonu açan sarmalayıcı kart.
 private struct SwipeToDeleteCard<Content: View>: View {
-    let content: () -> Content
     let onTap: () -> Void
     let onDelete: () -> Void
+    let content: () -> Content
 
     @State private var offset: CGFloat = 0
     @State private var baseOffset: CGFloat = 0
