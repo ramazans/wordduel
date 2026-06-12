@@ -25,13 +25,14 @@ struct MatchDetailView: View {
                     guestName: match.guest?.displayName ?? "Misafir",
                     hostScore: match.hostScore,
                     guestScore: match.guestScore,
+                    rounds: match.rounds ?? [],
+                    myRole: myRole,
                     onPlayAgain: {
                         dismiss()
                         onPlayAgain()
                     },
                     onHome: { dismiss() }
                 )
-                .navigationBarBackButtonHidden()
             } else {
                 VStack(spacing: WDSpacing.md) {
                     scoreHeader

@@ -22,7 +22,12 @@ struct HistoryView: View {
                 ScrollView {
                     LazyVStack(spacing: WDSpacing.sm) {
                         ForEach(finishedMatches) { match in
-                            historyCard(match)
+                            NavigationLink {
+                                MatchDetailView(match: match)
+                            } label: {
+                                historyCard(match)
+                            }
+                            .buttonStyle(WDPressableButtonStyle())
                         }
                     }
                     .padding()
