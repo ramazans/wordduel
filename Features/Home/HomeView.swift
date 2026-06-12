@@ -49,8 +49,14 @@ struct HomeView: View {
                     if viewModel == nil {
                         viewModel = HomeViewModel(syncService: services.matchSyncService)
                     }
-                    await pullRemoteUpdates()
-                    await scheduleTurnNotifications()
+                    // Rakibin hamleleri (katılım, maç bitişi) anasayfadayken de
+                    // görünsün diye periyodik yoklama — maç bitince skor kartı
+                    // ve Ezeli Rekabet anında güncellenir.
+                    while !Task.isCancelled {
+                        await pullRemoteUpdates()
+                        await scheduleTurnNotifications()
+                        try? await Task.sleep(for: .seconds(5))
+                    }
                 }
                 .task {
                     for await _ in services.pushUpdates {
