@@ -539,65 +539,56 @@ struct HomeView: View {
 
 // MARK: - Swipe to Delete
 
-/// Sola kaydırma ile silme (iOS Mail tarzı): buton açılan boşlukla birlikte
-/// büyür, eşik geçilince haptic verir, tam kaydırmada bırakınca siler.
-/// İçerik kırpılmaz — kartın yumuşak gölgesi bozulmadan kalır; buton kapalı
-/// durumda görünmez olduğu için kırpmaya gerek yoktur.
+/// Sola kaydırma ile silme (iOS Mail tarzı). Hem açılan kırmızı butona
+/// dokunma hem de tam kaydırma DOĞRUDAN `onDelete`'i çağırır; satırın
+/// kaybolma animasyonunu üst kattaki ForEach transition'ı üstlenir.
 private struct SwipeToDeleteCard<Content: View>: View {
     let content: () -> Content
     let onTap: () -> Void
     let onDelete: () -> Void
 
     @State private var offset: CGFloat = 0
-    @State private var isOpen = false
+    /// Dinlenme konumu: 0 kapalı, -revealWidth açık.
+    @State private var rest: CGFloat = 0
     /// Sürükleme yönü kilidi: dikey başlayan hareket ScrollView'a bırakılır.
-    @State private var dragAxis: Axis?
-    @State private var armedFullSwipe = false
-    @State private var isDeleting = false
-
-    private let revealWidth: CGFloat = 88
-    private let fullSwipeDistance: CGFloat = 200
+    @State private var axis: Axis?
+    @State private var armed = false
 
     private enum Axis { case horizontal, vertical }
+    private let revealWidth: CGFloat = 96
+    private let fullSwipe: CGFloat = 200
 
     var body: some View {
         ZStack(alignment: .trailing) {
-            deleteAction
+            deleteButton
 
             content()
                 .offset(x: offset)
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    if isOpen {
-                        close()
-                    } else {
-                        onTap()
-                    }
+                    if rest != 0 { close() } else { onTap() }
                 }
                 .simultaneousGesture(dragGesture)
         }
-        .sensoryFeedback(.impact(weight: .medium), trigger: armedFullSwipe) { _, armed in armed }
-        .sensoryFeedback(.success, trigger: isDeleting) { _, deleting in deleting }
+        .sensoryFeedback(.impact(weight: .medium), trigger: armed) { _, a in a }
     }
 
-    /// Açılan boşluğu dolduran sil butonu: genişliği sürüklemeyle büyür,
-    /// çöp kutusu eşiğe yaklaştıkça belirginleşir.
-    private var deleteAction: some View {
+    /// Açılan boşluğu dolduran sil butonu. Tam genişlikte ve yüksekte —
+    /// içerik bu bölgeyi örtmediği için dokunuş garantili butona gider.
+    private var deleteButton: some View {
         let exposed = max(0, -offset)
-        let progress = min(1, exposed / revealWidth)
+        let nearFull = exposed >= fullSwipe * 0.85
 
-        return Button {
-            performDelete()
-        } label: {
+        return Button(action: onDelete) {
             ZStack {
                 RoundedRectangle(cornerRadius: WDRadius.lg, style: .continuous)
                     .fill(Color.wdDanger)
                 VStack(spacing: 4) {
                     Image(systemName: "trash.fill")
                         .font(.system(size: 18, weight: .semibold))
-                        .scaleEffect(armedFullSwipe ? 1.25 : 0.8 + 0.2 * progress)
-                        .animation(.spring(duration: 0.25), value: armedFullSwipe)
-                    if exposed > 56 {
+                        .scaleEffect(nearFull ? 1.25 : 1)
+                        .animation(.spring(duration: 0.2), value: nearFull)
+                    if exposed > 60 {
                         Text("Sil")
                             .font(.wdLabel)
                             .transition(.opacity)
@@ -608,38 +599,38 @@ private struct SwipeToDeleteCard<Content: View>: View {
             .frame(width: max(revealWidth, exposed))
             .frame(maxHeight: .infinity)
         }
-        .opacity(progress)
-        .accessibilityHidden(exposed == 0)
+        .buttonStyle(.plain)
+        .opacity(exposed > 1 ? 1 : 0)
+        .accessibilityHidden(exposed < 1)
     }
 
     private var dragGesture: some Gesture {
-        DragGesture(minimumDistance: 12)
+        DragGesture(minimumDistance: 14)
             .onChanged { value in
-                guard !isDeleting else { return }
-                if dragAxis == nil {
-                    dragAxis = abs(value.translation.width) > abs(value.translation.height)
+                if axis == nil {
+                    axis = abs(value.translation.width) > abs(value.translation.height)
                         ? .horizontal : .vertical
                 }
-                guard dragAxis == .horizontal else { return }
+                guard axis == .horizontal else { return }
 
-                var dx = (isOpen ? -revealWidth : 0) + value.translation.width
+                var dx = rest + value.translation.width
                 dx = min(0, dx)
-                if dx < -fullSwipeDistance {
+                if dx < -fullSwipe {
                     // Tam kaydırma bölgesinin ötesinde hafif direnç
-                    let extra = -dx - fullSwipeDistance
-                    dx = -fullSwipeDistance - extra * 0.4
+                    dx = -fullSwipe - (-dx - fullSwipe) * 0.35
                 }
                 offset = dx
-                armedFullSwipe = offset < -fullSwipeDistance * 0.9
+                armed = -offset >= fullSwipe * 0.85
             }
             .onEnded { _ in
-                let wasHorizontal = dragAxis == .horizontal
-                dragAxis = nil
-                guard wasHorizontal, !isDeleting else { return }
+                let wasHorizontal = axis == .horizontal
+                axis = nil
+                guard wasHorizontal else { return }
 
-                if armedFullSwipe {
-                    performDelete()
-                } else if offset < -revealWidth / 2 {
+                if armed {
+                    armed = false
+                    onDelete()
+                } else if -offset > revealWidth / 2 {
                     open()
                 } else {
                     close()
@@ -648,31 +639,17 @@ private struct SwipeToDeleteCard<Content: View>: View {
     }
 
     private func open() {
-        isOpen = true
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+        rest = -revealWidth
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
             offset = -revealWidth
         }
     }
 
     private func close() {
-        isOpen = false
-        armedFullSwipe = false
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+        rest = 0
+        armed = false
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
             offset = 0
-        }
-    }
-
-    /// Kart sola süzülerek çıkar, ardından model silinir (satır çökmesini
-    /// caller'daki withAnimation + transition üstlenir).
-    private func performDelete() {
-        guard !isDeleting else { return }
-        isDeleting = true
-        withAnimation(.easeIn(duration: 0.2)) {
-            offset = -500
-        }
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(180))
-            onDelete()
         }
     }
 }
