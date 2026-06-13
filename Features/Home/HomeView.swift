@@ -101,13 +101,10 @@ struct HomeView: View {
             NavigationLink {
                 ProfileView()
             } label: {
-                AvatarView(
-                    name: me?.displayName ?? "?",
-                    colorIndex: me?.avatarColor ?? 0,
-                    size: 34
-                )
+                Image(systemName: "ellipsis")
+                    .fontWeight(.semibold)
             }
-            .accessibilityLabel("Profil")
+            .accessibilityLabel("Profil ve ayarlar")
         }
     }
 
@@ -244,6 +241,10 @@ struct HomeView: View {
             section("Davet bekleyenler") {
                 ForEach(pending) { match in
                     pendingCard(match)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .move(edge: .top)),
+                            removal: .move(edge: .leading).combined(with: .opacity)
+                        ))
                 }
             }
         }
@@ -365,11 +366,20 @@ struct HomeView: View {
             .wdCard()
         }
         .accessibilityLabel("Rakip bekleniyor, kod \(match.code.map(String.init).joined(separator: " ")), sola kaydırarak sil")
+        .accessibilityAction(named: "Daveti Sil") { deletePendingMatch(match) }
     }
 
+    /// Daveti hem yerelden hem public DB'den kaldırır — uzak kayıt silinmezse
+    /// arkadaş eski kodla hayalet bir maça katılabiliyordu.
     private func deletePendingMatch(_ match: Match) {
-        modelContext.delete(match)
-        try? modelContext.save()
+        let code = match.code
+        withAnimation(.spring(duration: 0.4)) {
+            modelContext.delete(match)
+            try? modelContext.save()
+        }
+        Task {
+            try? await services.matchSyncService.inviteRepository.delete(code: code)
+        }
     }
 
     private var actionBar: some View {
@@ -526,65 +536,128 @@ struct HomeView: View {
 
 // MARK: - Swipe to Delete
 
-/// Sola kaydırma ile arkasında "Sil" butonu açan sarmalayıcı kart.
+/// Sola kaydırma ile silme (iOS Mail tarzı). Hem açılan kırmızı butona
+/// dokunma hem de tam kaydırma DOĞRUDAN `onDelete`'i çağırır; satırın
+/// kaybolma animasyonunu üst kattaki ForEach transition'ı üstlenir.
 private struct SwipeToDeleteCard<Content: View>: View {
     let onTap: () -> Void
     let onDelete: () -> Void
-    let content: () -> Content
+    @ViewBuilder let content: () -> Content
+
+    init(
+        onTap: @escaping () -> Void,
+        onDelete: @escaping () -> Void,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.onTap = onTap
+        self.onDelete = onDelete
+        self.content = content
+    }
 
     @State private var offset: CGFloat = 0
-    @State private var baseOffset: CGFloat = 0
-    private let revealWidth: CGFloat = 80
+    /// Dinlenme konumu: 0 kapalı, -revealWidth açık.
+    @State private var rest: CGFloat = 0
+    /// Sürükleme yönü kilidi: dikey başlayan hareket ScrollView'a bırakılır.
+    @State private var axis: Axis?
+    @State private var armed = false
+
+    private enum Axis { case horizontal, vertical }
+    private let revealWidth: CGFloat = 96
+    private let fullSwipe: CGFloat = 200
 
     var body: some View {
         ZStack(alignment: .trailing) {
-            Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { offset = 0 }
-                baseOffset = 0
-                onDelete()
-            } label: {
-                VStack(spacing: 4) {
-                    Image(systemName: "trash")
-                        .font(.system(size: 18, weight: .semibold))
-                    Text("Sil")
-                        .font(.caption.weight(.semibold))
-                }
-                .foregroundStyle(.white)
-                .frame(width: revealWidth)
-                .frame(maxHeight: .infinity)
-            }
-            .background(Color.wdDanger, in: RoundedRectangle(cornerRadius: WDRadius.lg, style: .continuous))
+            deleteButton
 
             content()
                 .offset(x: offset)
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    if offset < 0 {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { offset = 0 }
-                        baseOffset = 0
-                    } else {
-                        onTap()
+                    if rest != 0 { close() } else { onTap() }
+                }
+                .simultaneousGesture(dragGesture)
+        }
+        .sensoryFeedback(.impact(weight: .medium), trigger: armed) { _, a in a }
+    }
+
+    /// Açılan boşluğu dolduran sil butonu. Tam genişlikte ve yüksekte —
+    /// içerik bu bölgeyi örtmediği için dokunuş garantili butona gider.
+    private var deleteButton: some View {
+        let exposed = max(0, -offset)
+        let nearFull = exposed >= fullSwipe * 0.85
+
+        return Button(action: onDelete) {
+            ZStack {
+                RoundedRectangle(cornerRadius: WDRadius.lg, style: .continuous)
+                    .fill(Color.wdDanger)
+                VStack(spacing: 4) {
+                    Image(systemName: "trash.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .scaleEffect(nearFull ? 1.25 : 1)
+                        .animation(.spring(duration: 0.2), value: nearFull)
+                    if exposed > 60 {
+                        Text("Sil")
+                            .font(.wdLabel)
+                            .transition(.opacity)
                     }
                 }
-                .gesture(
-                    DragGesture(minimumDistance: 10)
-                        .onChanged { value in
-                            let dx = value.translation.width
-                            let dy = value.translation.height
-                            guard abs(dx) > abs(dy) else { return }
-                            offset = max(-revealWidth, min(0, baseOffset + dx))
-                        }
-                        .onEnded { value in
-                            let shouldOpen = offset < -(revealWidth / 2)
-                            let target: CGFloat = shouldOpen ? -revealWidth : 0
-                            baseOffset = target
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                offset = target
-                            }
-                        }
-                )
+                .foregroundStyle(.white)
+            }
+            .frame(width: max(revealWidth, exposed))
+            .frame(maxHeight: .infinity)
         }
-        .clipped()
+        .buttonStyle(.plain)
+        .opacity(exposed > 1 ? 1 : 0)
+        .accessibilityHidden(exposed < 1)
+    }
+
+    private var dragGesture: some Gesture {
+        DragGesture(minimumDistance: 14)
+            .onChanged { value in
+                if axis == nil {
+                    axis = abs(value.translation.width) > abs(value.translation.height)
+                        ? .horizontal : .vertical
+                }
+                guard axis == .horizontal else { return }
+
+                var dx = rest + value.translation.width
+                dx = min(0, dx)
+                if dx < -fullSwipe {
+                    // Tam kaydırma bölgesinin ötesinde hafif direnç
+                    dx = -fullSwipe - (-dx - fullSwipe) * 0.35
+                }
+                offset = dx
+                armed = -offset >= fullSwipe * 0.85
+            }
+            .onEnded { _ in
+                let wasHorizontal = axis == .horizontal
+                axis = nil
+                guard wasHorizontal else { return }
+
+                if armed {
+                    armed = false
+                    onDelete()
+                } else if -offset > revealWidth / 2 {
+                    open()
+                } else {
+                    close()
+                }
+            }
+    }
+
+    private func open() {
+        rest = -revealWidth
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
+            offset = -revealWidth
+        }
+    }
+
+    private func close() {
+        rest = 0
+        armed = false
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
+            offset = 0
+        }
     }
 }
 
