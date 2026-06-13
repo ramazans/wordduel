@@ -102,10 +102,7 @@ struct HomeView: View {
                 ProfileView()
             } label: {
                 Image(systemName: "ellipsis")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.wdInk)
-                    .frame(width: 36, height: 36)
-                    .background(Color.wdSurfaceSecondary, in: Circle())
+                    .fontWeight(.semibold)
             }
             .accessibilityLabel("Profil ve ayarlar")
         }
