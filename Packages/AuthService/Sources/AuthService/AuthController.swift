@@ -119,12 +119,12 @@ public final class AuthController {
         }
     }
 
+    /// Oturumu kapatır. Player kaydını SİLMEZ — Apple ismi yalnızca ilk
+    /// onayda geldiğinden, kaydı silersek tekrar girişte isim kaybolurdu.
+    /// Kalıcı silme yalnızca "Hesabı Sil" akışında yapılır.
     public func signOut(modelContext: ModelContext) {
-        if let storedID = storedAppleUserID {
-            try? PlayerUpsert.delete(appleUserID: storedID, in: modelContext)
-        }
         storedAppleUserID = nil
-        logger.info("Sign out — stored Apple user ID cleared.")
+        logger.info("Sign out — oturum kapatıldı, Player kaydı korundu.")
         phase = .idle
     }
 
