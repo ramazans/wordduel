@@ -543,9 +543,19 @@ struct HomeView: View {
 /// dokunma hem de tam kaydırma DOĞRUDAN `onDelete`'i çağırır; satırın
 /// kaybolma animasyonunu üst kattaki ForEach transition'ı üstlenir.
 private struct SwipeToDeleteCard<Content: View>: View {
-    let content: () -> Content
     let onTap: () -> Void
     let onDelete: () -> Void
+    @ViewBuilder let content: () -> Content
+
+    init(
+        onTap: @escaping () -> Void,
+        onDelete: @escaping () -> Void,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.onTap = onTap
+        self.onDelete = onDelete
+        self.content = content
+    }
 
     @State private var offset: CGFloat = 0
     /// Dinlenme konumu: 0 kapalı, -revealWidth açık.
