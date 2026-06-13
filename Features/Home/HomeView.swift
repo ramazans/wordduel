@@ -101,13 +101,13 @@ struct HomeView: View {
             NavigationLink {
                 ProfileView()
             } label: {
-                AvatarView(
-                    name: me?.displayName ?? "?",
-                    colorIndex: me?.avatarColor ?? 0,
-                    size: 34
-                )
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.wdInk)
+                    .frame(width: 36, height: 36)
+                    .background(Color.wdSurfaceSecondary, in: Circle())
             }
-            .accessibilityLabel("Profil")
+            .accessibilityLabel("Profil ve ayarlar")
         }
     }
 
