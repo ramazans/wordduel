@@ -35,9 +35,9 @@ public actor MatchSyncService {
     public let containerIdentifier: String
     private let container: CKContainer
     public let account: CloudKitAccount
-    public let inviteRepository: InviteRepository
     /// Modül dışından (app katmanı) senkron erişim için nonisolated —
     /// aktör tipler Sendable olduğundan güvenli.
+    public nonisolated let inviteRepository: InviteRepository
     public nonisolated let stateRepository: MatchStateRepository
 
     public init(containerIdentifier: String) {
