@@ -72,6 +72,7 @@ public final class AuthController {
         if state == .revoked {
             logger.warning("Credential revoked by user — signing out.")
             try? PlayerUpsert.delete(appleUserID: storedID, in: modelContext)
+            signInService.forgetProfile(appleUserID: storedID)
             storedAppleUserID = nil
             phase = .revoked
         }

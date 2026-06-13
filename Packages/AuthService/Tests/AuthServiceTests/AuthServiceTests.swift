@@ -11,6 +11,81 @@ final class AuthServiceTests: XCTestCase {
     }
 }
 
+/// Testler için bellek-içi `ProfileNameStore`.
+final class FakeProfileNameStore: ProfileNameStore, @unchecked Sendable {
+    private var storage: [String: String] = [:]
+
+    func displayName(for appleUserID: String) -> String? {
+        storage[appleUserID]
+    }
+
+    func setDisplayName(_ name: String, for appleUserID: String) {
+        storage[appleUserID] = name
+    }
+
+    func removeDisplayName(for appleUserID: String) {
+        storage[appleUserID] = nil
+    }
+}
+
+final class ResolveDisplayNameTests: XCTestCase {
+    func testFirstSignInStoresAndReturnsAppleName() {
+        let store = FakeProfileNameStore()
+        let result = AppleSignInService.resolveDisplayName(
+            rawAppleName: "Ramazan",
+            appleUserID: "u-1",
+            store: store
+        )
+        XCTAssertEqual(result.displayName, "Ramazan")
+        XCTAssertTrue(result.isFirstTime)
+        XCTAssertEqual(store.displayName(for: "u-1"), "Ramazan")
+    }
+
+    func testReinstallRecoversNameFromStoreWhenAppleSendsNothing() {
+        let store = FakeProfileNameStore()
+        // İlk giriş Apple ismi gönderdi → cache'lendi
+        _ = AppleSignInService.resolveDisplayName(
+            rawAppleName: "Ramazan", appleUserID: "u-1", store: store
+        )
+        // Reinstall: Apple boş gönderir → cache'ten kurtarılır
+        let result = AppleSignInService.resolveDisplayName(
+            rawAppleName: "", appleUserID: "u-1", store: store
+        )
+        XCTAssertEqual(result.displayName, "Ramazan")
+        XCTAssertFalse(result.isFirstTime)
+    }
+
+    func testEmptyNameWithEmptyStoreFallsBackToEmpty() {
+        let store = FakeProfileNameStore()
+        let result = AppleSignInService.resolveDisplayName(
+            rawAppleName: "", appleUserID: "u-1", store: store
+        )
+        XCTAssertEqual(result.displayName, "")
+        XCTAssertFalse(result.isFirstTime)
+    }
+
+    func testWhitespaceNameIsTreatedAsEmpty() {
+        let store = FakeProfileNameStore()
+        let result = AppleSignInService.resolveDisplayName(
+            rawAppleName: "   ", appleUserID: "u-1", store: store
+        )
+        XCTAssertEqual(result.displayName, "")
+        XCTAssertNil(store.displayName(for: "u-1"))
+    }
+
+    func testForgetRemovesCachedName() {
+        let store = FakeProfileNameStore()
+        _ = AppleSignInService.resolveDisplayName(
+            rawAppleName: "Ramazan", appleUserID: "u-1", store: store
+        )
+        store.removeDisplayName(for: "u-1")
+        let result = AppleSignInService.resolveDisplayName(
+            rawAppleName: "", appleUserID: "u-1", store: store
+        )
+        XCTAssertEqual(result.displayName, "")
+    }
+}
+
 final class PlayerUpsertTests: XCTestCase {
     @MainActor
     func makeContext() throws -> ModelContext {

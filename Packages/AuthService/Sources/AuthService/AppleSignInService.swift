@@ -39,9 +39,18 @@ public final class AppleSignInService: NSObject {
 
     private var continuation: CheckedContinuation<Result, Error>?
     private var presentationProvider: PresentationProvider?
+    private let profileStore: ProfileNameStore
 
-    public override init() {
+    public init(profileStore: ProfileNameStore = KeychainProfileStore()) {
+        self.profileStore = profileStore
         super.init()
+    }
+
+    /// `appleUserID` için saklanan görünen adı kalıcı depodan siler.
+    /// Yalnızca gerçek hesap sıfırlamada (credential revoke / hesabı sil)
+    /// çağrılmalı — logout'ta çağrılmaz ki re-login'de isim geri gelsin.
+    public func forgetProfile(appleUserID: String) {
+        profileStore.removeDisplayName(for: appleUserID)
     }
 
     // MARK: - Public API
@@ -85,22 +94,49 @@ public final class AppleSignInService: NSObject {
         guard !userID.isEmpty else { throw AuthError.invalidCredential }
 
         // Görünen ad olarak ön adı tercih et ("Ramazan Sağır" → "Ramazan");
-        // ön ad yoksa soyadına düş. Apple `fullName`'i YALNIZCA ilk onayda
-        // gönderir — sonraki girişlerde boş gelir, bu durumda PlayerUpsert
-        // `Player-XXXX` atar.
+        // ön ad yoksa soyadına düş.
         let givenName = credential.fullName?.givenName?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let familyName = credential.fullName?.familyName?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let displayName = givenName.isEmpty ? familyName : givenName
-        let isFirstTime = !displayName.isEmpty
+        let rawAppleName = givenName.isEmpty ? familyName : givenName
+
+        let resolved = Self.resolveDisplayName(
+            rawAppleName: rawAppleName,
+            appleUserID: userID,
+            store: profileStore
+        )
 
         return Result(
             appleUserID: userID,
-            displayName: displayName,
+            displayName: resolved.displayName,
             identityTokenData: credential.identityToken,
-            isFirstTime: isFirstTime
+            isFirstTime: resolved.isFirstTime
         )
+    }
+
+    /// Apple'dan gelen ham adı kalıcı depoyla uzlaştırır (saf, test edilebilir).
+    ///
+    /// - Apple gerçek bir ad gönderdiyse (ilk onay): depoya yaz ve onu kullan.
+    /// - Apple ad göndermediyse (reinstall / sonraki girişler): depodan kurtar.
+    ///   Böylece uygulama silinip yeniden kurulsa bile, sabit `appleUserID`
+    ///   üzerinden gerçek ad geri gelir.
+    /// - Hiçbir ad yoksa boş döner; downstream `PlayerUpsert` `Player-XXXX`
+    ///   atar (son çare).
+    nonisolated static func resolveDisplayName(
+        rawAppleName: String,
+        appleUserID: String,
+        store: ProfileNameStore
+    ) -> (displayName: String, isFirstTime: Bool) {
+        let trimmed = rawAppleName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            store.setDisplayName(trimmed, for: appleUserID)
+            return (trimmed, true)
+        }
+        if let cached = store.displayName(for: appleUserID), !cached.isEmpty {
+            return (cached, false)
+        }
+        return ("", false)
     }
 }
 
