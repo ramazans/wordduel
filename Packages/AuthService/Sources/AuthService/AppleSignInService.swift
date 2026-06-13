@@ -84,16 +84,20 @@ public final class AppleSignInService: NSObject {
         let userID = credential.user
         guard !userID.isEmpty else { throw AuthError.invalidCredential }
 
-        let givenName = credential.fullName?.givenName ?? ""
-        let familyName = credential.fullName?.familyName ?? ""
-        let composedName = [givenName, familyName]
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
-        let isFirstTime = !composedName.isEmpty
+        // Görünen ad olarak ön adı tercih et ("Ramazan Sağır" → "Ramazan");
+        // ön ad yoksa soyadına düş. Apple `fullName`'i YALNIZCA ilk onayda
+        // gönderir — sonraki girişlerde boş gelir, bu durumda PlayerUpsert
+        // `Player-XXXX` atar.
+        let givenName = credential.fullName?.givenName?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let familyName = credential.fullName?.familyName?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let displayName = givenName.isEmpty ? familyName : givenName
+        let isFirstTime = !displayName.isEmpty
 
         return Result(
             appleUserID: userID,
-            displayName: composedName,
+            displayName: displayName,
             identityTokenData: credential.identityToken,
             isFirstTime: isFirstTime
         )
