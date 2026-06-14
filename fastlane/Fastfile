@@ -1,0 +1,60 @@
+default_platform(:ios)
+
+# WordDuel TestFlight dağıtımı.
+#
+# Kimlik doğrulama ve imzalama tamamen App Store Connect API anahtarı ile yapılır
+# (Apple ID / parola yok). xcodebuild "automatic signing" + `-allowProvisioningUpdates`
+# sayesinde dağıtım sertifikası ve provisioning profile bulutta otomatik üretilir.
+#
+# Gerekli ortam değişkenleri (CI'da GitHub Secrets'tan gelir):
+#   ASC_KEY_ID        App Store Connect API Key ID
+#   ASC_ISSUER_ID     App Store Connect Issuer ID
+#   ASC_KEY_PATH      .p8 anahtar dosyasının yolu (workflow decode eder)
+#   APPLE_TEAM_ID     10 karakterlik Apple Developer Team ID
+#   BUILD_NUMBER      Benzersiz build numarası (her yükleme için artmalı)
+
+platform :ios do
+  desc "Build ve TestFlight'a yükle"
+  lane :beta do
+    key_id    = ENV.fetch("ASC_KEY_ID")
+    issuer_id = ENV.fetch("ASC_ISSUER_ID")
+    key_path  = ENV.fetch("ASC_KEY_PATH")
+    team_id   = ENV.fetch("APPLE_TEAM_ID")
+    build_number = ENV.fetch("BUILD_NUMBER")
+
+    api_key = app_store_connect_api_key(
+      key_id: key_id,
+      issuer_id: issuer_id,
+      key_filepath: key_path,
+      in_house: false
+    )
+
+    build_app(
+      project: "WordDuel.xcodeproj",
+      scheme: "WordDuel",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "build",
+      output_name: "WordDuel.ipa",
+      xcargs: [
+        "DEVELOPMENT_TEAM=#{team_id}",
+        "CURRENT_PROJECT_VERSION=#{build_number}",
+        "-allowProvisioningUpdates",
+        "-authenticationKeyPath #{key_path}",
+        "-authenticationKeyID #{key_id}",
+        "-authenticationKeyIssuerID #{issuer_id}"
+      ].join(" "),
+      export_options: {
+        method: "app-store",
+        teamID: team_id,
+        signingStyle: "automatic"
+      }
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,
+      distribute_external: false
+    )
+  end
+end
