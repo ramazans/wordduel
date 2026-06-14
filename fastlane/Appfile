@@ -1,0 +1,4 @@
+app_identifier("club.kadro.wordduel")
+
+# Kimlik doğrulama App Store Connect API anahtarı ile yapılır (bkz. Fastfile).
+# Apple ID / şifre gerekmez.
