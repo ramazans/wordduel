@@ -86,6 +86,39 @@ final class ResolveDisplayNameTests: XCTestCase {
     }
 }
 
+final class RememberProfileNameTests: XCTestCase {
+    @MainActor
+    func testRemembersRealName() {
+        let store = FakeProfileNameStore()
+        let service = AppleSignInService(profileStore: store)
+        service.rememberProfileName("Ramazan", for: "u-1")
+        XCTAssertEqual(store.displayName(for: "u-1"), "Ramazan")
+    }
+
+    @MainActor
+    func testIgnoresPlaceholder() {
+        let store = FakeProfileNameStore()
+        let service = AppleSignInService(profileStore: store)
+        service.rememberProfileName("Player-0427", for: "u-1")
+        XCTAssertNil(store.displayName(for: "u-1"))
+    }
+
+    @MainActor
+    func testIgnoresEmpty() {
+        let store = FakeProfileNameStore()
+        let service = AppleSignInService(profileStore: store)
+        service.rememberProfileName("   ", for: "u-1")
+        XCTAssertNil(store.displayName(for: "u-1"))
+    }
+
+    func testIsPlaceholderNameMatchesPatternOnly() {
+        XCTAssertTrue(AppleSignInService.isPlaceholderName("Player-0427"))
+        XCTAssertFalse(AppleSignInService.isPlaceholderName("Ramazan"))
+        XCTAssertFalse(AppleSignInService.isPlaceholderName("Player-42"))
+        XCTAssertFalse(AppleSignInService.isPlaceholderName("Player-Ali"))
+    }
+}
+
 final class PlayerUpsertTests: XCTestCase {
     @MainActor
     func makeContext() throws -> ModelContext {

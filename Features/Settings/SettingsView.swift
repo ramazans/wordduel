@@ -33,6 +33,11 @@ struct SettingsView: View {
                                 .font(.wdHeadline)
                                 .foregroundStyle(Color.wdInk)
                                 .submitLabel(.done)
+                                // Elle girilen ad Keychain'e de yazılır ki
+                                // yeniden kurulumda kurtarılabilsin.
+                                .onSubmit {
+                                    authController.rememberDisplayName(player.displayName)
+                                }
                         }
                     }
                     .padding(.vertical, 4)
