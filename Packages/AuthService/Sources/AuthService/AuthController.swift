@@ -120,6 +120,15 @@ public final class AuthController {
         }
     }
 
+    /// Kullanıcının elle belirlediği görünen adı kalıcı depoya (Keychain) yazar.
+    /// İsim ekranından ve Ayarlar'daki ad alanından çağrılır; böylece kullanıcının
+    /// seçtiği ad uygulama silinip yeniden kurulsa bile geri gelir.
+    public func rememberDisplayName(_ name: String) {
+        guard case .signedIn(let appleUserID) = phase else { return }
+        guard Player.isRealName(name) else { return }
+        signInService.rememberProfileName(name, for: appleUserID)
+    }
+
     /// Oturumu kapatır. Player kaydını SİLMEZ — Apple ismi yalnızca ilk
     /// onayda geldiğinden, kaydı silersek tekrar girişte isim kaybolurdu.
     /// Kalıcı silme yalnızca "Hesabı Sil" akışında yapılır.

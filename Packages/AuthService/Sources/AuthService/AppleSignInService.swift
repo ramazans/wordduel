@@ -53,6 +53,24 @@ public final class AppleSignInService: NSObject {
         profileStore.removeDisplayName(for: appleUserID)
     }
 
+    /// Kullanıcının elle belirlediği gerçek adı kalıcı depoya yazar. Apple ismi
+    /// yalnızca ilk onayda gönderdiğinden, kullanıcı adını uygulama içinde
+    /// (isim ekranı / Ayarlar) girdiğinde de Keychain'e yazıyoruz ki yeniden
+    /// kurulumda kurtarılabilsin. Boş/placeholder adlar yazılmaz.
+    public func rememberProfileName(_ name: String, for appleUserID: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !Self.isPlaceholderName(trimmed) else { return }
+        profileStore.setDisplayName(trimmed, for: appleUserID)
+    }
+
+    /// `Player-1234` kalıbı mı? (CoreModels'a bağımlılık eklememek için yerel kopya.)
+    nonisolated static func isPlaceholderName(_ name: String) -> Bool {
+        let prefix = "Player-"
+        guard name.hasPrefix(prefix) else { return false }
+        let suffix = name.dropFirst(prefix.count)
+        return suffix.count == 4 && suffix.allSatisfy(\.isNumber)
+    }
+
     // MARK: - Public API
 
     /// Modal Sign in with Apple flow'u başlatır.
