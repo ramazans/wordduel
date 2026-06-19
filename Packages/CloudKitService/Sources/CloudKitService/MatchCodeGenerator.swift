@@ -1,9 +1,9 @@
 import Foundation
 
-/// 6 hane, ambiguous karakterler (0/O, 1/I/L) elenmiş davet kodu üretici.
-/// Alphabet 32 karakter, 6 hane → ~10⁹ kombinasyon, kısa süreli unique olur.
+/// 6 hane, ambiguous karakterler (O/I/L) elenmiş, sadece harflerden oluşan davet kodu üretici.
+/// Alphabet 23 karakter, 6 hane → ~148 milyon kombinasyon, kısa süreli unique olur.
 public enum MatchCodeGenerator {
-    public static let alphabet = Array("23456789ABCDEFGHJKMNPQRSTUVWXYZ")
+    public static let alphabet = Array("ABCDEFGHJKMNPQRSTUVWXYZ")
     public static let codeLength = 6
 
     public static func generate<G: RandomNumberGenerator>(using generator: inout G) -> String {
