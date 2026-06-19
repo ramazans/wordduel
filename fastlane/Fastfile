@@ -54,11 +54,15 @@ platform :ios do
       }
     )
 
+    # Yalnızca internal testing: build yüklenir ve işlenmesi beklenir; varsayılan
+    # "App Store Connect Users" internal grubu tüm build'lere otomatik erişir, bu
+    # yüzden takımdaki testçiler (hesap sahibi dahil) build'i hemen görür.
+    # `groups`/external dağıtım BİLİNÇLİ olarak yok: harici test "Beta App
+    # Description" + beta app review gerektirir; takım-içi testte gereksizdir.
     upload_to_testflight(
       api_key: api_key,
       skip_waiting_for_build_processing: false,
-      distribute_external: false,
-      groups: ["App Store Connect Users"]
+      distribute_external: false
     )
   end
 end
