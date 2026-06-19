@@ -591,6 +591,11 @@ private struct SwipeToDeleteCard<Content: View>: View {
 
     var body: some View {
         ZStack(alignment: .trailing) {
+            // Kırmızı arka plan içeriğin ALTINDA: içerik sola kayınca arkadan
+            // ortaya çıkar (iOS Mail tarzı reveal). Üste alınırsa içeriğin
+            // üzerine biniyormuş gibi görünüyordu.
+            deleteBackground
+
             content()
                 .offset(x: offset)
                 .contentShape(Rectangle())
@@ -599,46 +604,40 @@ private struct SwipeToDeleteCard<Content: View>: View {
                 }
                 .simultaneousGesture(dragGesture)
 
-            // Sil butonu içeriğin ÜSTÜNDE durmalı: içeriğin drag/tap jestlerinin
-            // dokunma alanı `.offset`'e rağmen tam genişlikte kaldığından, buton
-            // altta kalınca açık konumdaki butona dokunmak içeriğe takılıyor ve
-            // silme tetiklenmiyordu. Kapalıyken hit-testing kapalı, böylece
-            // içeriğin kaydırma/dokunma jestlerini engellemez.
-            deleteButton
-                .allowsHitTesting(rest != 0)
+            // Açıkken sil bölgesi için saydam dokunuş yakalayıcı. İçeriğin
+            // drag/tap jest alanı `.offset`'e rağmen tam genişlikte kaldığından
+            // arka plana doğrudan dokunmak içeriğe takılıyordu; bu üst katman
+            // dokunuşu görseli bozmadan garanti onDelete'e yönlendirir.
+            if rest != 0 {
+                Color.clear
+                    .frame(width: revealWidth)
+                    .frame(maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                    .onTapGesture { onDelete() }
+            }
         }
         .sensoryFeedback(.impact(weight: .medium), trigger: armed) { _, a in a }
     }
 
-    /// Açılan boşluğu dolduran sil butonu. Tam genişlikte ve yüksekte —
-    /// içerik bu bölgeyi örtmediği için dokunuş garantili butona gider.
-    private var deleteButton: some View {
+    /// Açılan boşluğu dolduran kırmızı arka plan (yalnızca görsel). Dokunuş,
+    /// üstteki saydam yakalayıcı veya tam kaydırma ile yönetilir.
+    private var deleteBackground: some View {
         let exposed = max(0, -offset)
         let nearFull = exposed >= fullSwipe * 0.85
 
-        return Button(action: onDelete) {
-            ZStack {
-                RoundedRectangle(cornerRadius: WDRadius.lg, style: .continuous)
-                    .fill(Color.wdDanger)
-                VStack(spacing: 4) {
-                    Image(systemName: "trash.fill")
-                        .font(.system(size: 18, weight: .semibold))
-                        .scaleEffect(nearFull ? 1.25 : 1)
-                        .animation(.spring(duration: 0.2), value: nearFull)
-                    if exposed > 60 {
-                        Text("Sil")
-                            .font(.wdLabel)
-                            .transition(.opacity)
-                    }
-                }
+        return ZStack {
+            RoundedRectangle(cornerRadius: WDRadius.lg, style: .continuous)
+                .fill(Color.wdDanger)
+            Image(systemName: "trash.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .scaleEffect(nearFull ? 1.25 : 1)
+                .animation(.spring(duration: 0.2), value: nearFull)
                 .foregroundStyle(.white)
-            }
-            .frame(width: max(revealWidth, exposed))
-            .frame(maxHeight: .infinity)
         }
-        .buttonStyle(.plain)
+        .frame(width: max(revealWidth, exposed))
+        .frame(maxHeight: .infinity)
         .opacity(exposed > 1 ? 1 : 0)
-        .accessibilityHidden(exposed < 1)
+        .accessibilityHidden(true)
     }
 
     private var dragGesture: some Gesture {
