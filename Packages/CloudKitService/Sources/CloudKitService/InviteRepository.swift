@@ -4,10 +4,21 @@ import CloudKit
 /// `MatchInvite` kayıtlarını public DB üzerinde yöneten repo.
 /// Kod → shareURL lookup'ı için ana giriş noktası.
 public actor InviteRepository {
-    public enum InviteError: Error, Sendable, Equatable {
+    public enum InviteError: Error, Sendable, Equatable, LocalizedError {
         case codeNotFound
         case codeExpired
         case underlying(String)
+
+        // Gerçek hata mesajı yüzeye çıksın diye; aksi halde
+        // `localizedDescription` "İşlem tamamlanamadı (CloudKitService...)"
+        // gibi anlamsız bir metne düşüyor ve asıl neden kayboluyor.
+        public var errorDescription: String? {
+            switch self {
+            case .codeNotFound: return "Kod bulunamadı."
+            case .codeExpired: return "Kodun süresi dolmuş."
+            case .underlying(let detail): return detail
+            }
+        }
     }
 
     private let database: CKDatabase
@@ -31,26 +42,28 @@ public actor InviteRepository {
     }
 
     /// Kodla davet kaydını bulur. Süresi dolmuşsa `.codeExpired` fırlatır.
+    ///
+    /// Davet kaydı deterministik bir record ID ("invite-<kod>") ile yazıldığı
+    /// için (bkz. `MatchInvite.asRecord` ve `delete`), kaydı sorgu yerine
+    /// doğrudan ID ile çekiyoruz. `CKQuery` yaklaşımı public DB şemasında
+    /// `code` alanının "Queryable", `createdAt` alanının "Sortable" olarak
+    /// indekslenmesini gerektirir; bu indeksler CloudKit Dashboard'da tanımlı
+    /// değilse katılma, maskelenen bir CloudKit hatasıyla başarısız olur.
+    /// ID ile çekim indeks gerektirmez, ayrıca daha hızlı ve ucuzdur.
     public func find(byCode code: String) async throws -> MatchInvite {
         let normalized = MatchCodeGenerator.normalize(code)
         guard MatchCodeGenerator.isValid(normalized) else {
             throw InviteError.codeNotFound
         }
 
-        let predicate = NSPredicate(format: "%K == %@", MatchInvite.Field.code, normalized)
-        let query = CKQuery(recordType: MatchInvite.recordType, predicate: predicate)
-        query.sortDescriptors = [NSSortDescriptor(key: MatchInvite.Field.createdAt, ascending: false)]
-
-        let results: [CKRecord]
+        let recordID = CKRecord.ID(recordName: "invite-\(normalized)")
+        let record: CKRecord
         do {
-            let response = try await database.records(matching: query, resultsLimit: 1)
-            results = response.matchResults.compactMap { try? $0.1.get() }
+            record = try await database.record(for: recordID)
+        } catch let error as CKError where error.code == .unknownItem {
+            throw InviteError.codeNotFound
         } catch {
             throw InviteError.underlying(error.localizedDescription)
-        }
-
-        guard let record = results.first else {
-            throw InviteError.codeNotFound
         }
 
         let invite = try MatchInvite(record: record)
