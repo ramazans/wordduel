@@ -60,5 +60,7 @@
 	</array>
 	<key>NSUserActivityTypes</key>
 	<array/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
