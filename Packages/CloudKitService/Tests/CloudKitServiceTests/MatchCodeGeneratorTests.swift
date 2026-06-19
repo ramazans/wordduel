@@ -27,35 +27,51 @@ final class MatchCodeGeneratorTests: XCTestCase {
         }
     }
 
+    func testAlphabetContainsNoDigits() {
+        let alphabet = Set(MatchCodeGenerator.alphabet)
+        for digit in "0123456789" {
+            XCTAssertFalse(alphabet.contains(digit), "Alphabet should not contain digit \(digit)")
+        }
+    }
+
     func testNormalizeUppercasesAndFilters() {
-        XCTAssertEqual(MatchCodeGenerator.normalize("ab23k9"), "AB23K9")
-        // 'I' filtered out, 'L' filtered out, 'O' filtered out
-        XCTAssertEqual(MatchCodeGenerator.normalize(" ab-23 k9 "), "AB23K9")
+        XCTAssertEqual(MatchCodeGenerator.normalize("abcdef"), "ABCDEF")
+        // Spaces and dashes stripped; result uppercase
+        XCTAssertEqual(MatchCodeGenerator.normalize(" ab-cd ef "), "ABCDEF")
     }
 
     func testNormalizeDropsDisallowedAmbiguous() {
-        // 'O', '1', 'I', 'L' kaldırılır; geri kalan 6'a kırpılır
-        XCTAssertEqual(MatchCodeGenerator.normalize("OAB1IL23K9"), "AB23K9")
+        // 'O', 'I', 'L' ve rakamlar kaldırılır; geri kalan 6'a kırpılır
+        XCTAssertEqual(MatchCodeGenerator.normalize("OABCILDEF"), "ABCDEF")
+    }
+
+    func testNormalizeDropsDigits() {
+        // Rakamlar artık alfabede yok — normalize ederken düşer
+        XCTAssertEqual(MatchCodeGenerator.normalize("A1B2C3D4E5F6"), "ABCDEF")
     }
 
     func testNormalizeTrimsToCodeLength() {
-        XCTAssertEqual(MatchCodeGenerator.normalize("AB23K9XYZ").count, 6)
+        XCTAssertEqual(MatchCodeGenerator.normalize("ABCDEFXYZ").count, 6)
     }
 
     func testIsValidAcceptsCorrectCode() {
-        XCTAssertTrue(MatchCodeGenerator.isValid("AB23K9"))
+        XCTAssertTrue(MatchCodeGenerator.isValid("ABCDEF"))
     }
 
     func testIsValidRejectsTooShort() {
-        XCTAssertFalse(MatchCodeGenerator.isValid("AB23K"))
+        XCTAssertFalse(MatchCodeGenerator.isValid("ABCDE"))
     }
 
     func testIsValidRejectsLowercase() {
-        XCTAssertFalse(MatchCodeGenerator.isValid("ab23k9"))
+        XCTAssertFalse(MatchCodeGenerator.isValid("abcdef"))
     }
 
     func testIsValidRejectsAmbiguous() {
-        XCTAssertFalse(MatchCodeGenerator.isValid("AB23O9"))
+        XCTAssertFalse(MatchCodeGenerator.isValid("ABCDOF"))
+    }
+
+    func testIsValidRejectsDigits() {
+        XCTAssertFalse(MatchCodeGenerator.isValid("ABC2EF"))
     }
 
     func testCustomGeneratorIsDeterministic() {
