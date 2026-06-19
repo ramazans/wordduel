@@ -567,8 +567,6 @@ private struct SwipeToDeleteCard<Content: View>: View {
 
     var body: some View {
         ZStack(alignment: .trailing) {
-            deleteButton
-
             content()
                 .offset(x: offset)
                 .contentShape(Rectangle())
@@ -576,6 +574,14 @@ private struct SwipeToDeleteCard<Content: View>: View {
                     if rest != 0 { close() } else { onTap() }
                 }
                 .simultaneousGesture(dragGesture)
+
+            // Sil butonu içeriğin ÜSTÜNDE durmalı: içeriğin drag/tap jestlerinin
+            // dokunma alanı `.offset`'e rağmen tam genişlikte kaldığından, buton
+            // altta kalınca açık konumdaki butona dokunmak içeriğe takılıyor ve
+            // silme tetiklenmiyordu. Kapalıyken hit-testing kapalı, böylece
+            // içeriğin kaydırma/dokunma jestlerini engellemez.
+            deleteButton
+                .allowsHitTesting(rest != 0)
         }
         .sensoryFeedback(.impact(weight: .medium), trigger: armed) { _, a in a }
     }
