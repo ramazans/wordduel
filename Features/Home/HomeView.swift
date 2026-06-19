@@ -14,6 +14,8 @@ struct HomeView: View {
     @State private var viewModel: HomeViewModel?
     @State private var showJoinSheet = false
     @State private var reinvite: ReinviteCode?
+    /// Rakip koda katılınca host cihazında otomatik açılacak maç.
+    @State private var openedMatch: Match?
 
     private struct ReinviteCode: Identifiable {
         let code: String
@@ -45,6 +47,11 @@ struct HomeView: View {
                     JoinByCodeView(syncService: services.matchSyncService)
                         .presentationDetents([.medium])
                 }
+                .navigationDestination(item: $openedMatch) { match in
+                    MatchDetailView(match: match) {
+                        Task { await createNewMatch() }
+                    }
+                }
                 .task {
                     if viewModel == nil {
                         viewModel = HomeViewModel(syncService: services.matchSyncService)
@@ -54,6 +61,7 @@ struct HomeView: View {
                     // ve Ezeli Rekabet anında güncellenir.
                     while !Task.isCancelled {
                         await pullRemoteUpdates()
+                        handleHostMatchActivation()
                         await scheduleTurnNotifications()
                         try? await Task.sleep(for: .seconds(5))
                     }
@@ -61,6 +69,7 @@ struct HomeView: View {
                 .task {
                     for await _ in services.pushUpdates {
                         await pullRemoteUpdates()
+                        handleHostMatchActivation()
                         await scheduleTurnNotifications()
                     }
                 }
@@ -500,6 +509,21 @@ struct HomeView: View {
         let opponentName = stats.opponent(in: match)?.displayName ?? "Rakip"
         let turnNote = isMyTurn ? ", sıra sende" : ""
         return "Maç: \(opponentName) ile, tur \(match.currentRoundIndex + 1) / \(match.totalRounds), skor \(stats.myScore(in: match)) - \(stats.opponentScore(in: match))\(turnNote)"
+    }
+
+    /// Paylaşım ekranı açıkken rakip koda katıldıysa (maç `.pending` → `.active`):
+    /// paylaşım sayfasını kapat ve ilgili maç ekranını otomatik aç.
+    private func handleHostMatchActivation() {
+        guard case .created(let code, _) = viewModel?.createState else { return }
+        guard let match = matches.first(where: { $0.code == code }),
+              match.status == .active else { return }
+        viewModel?.dismissCreatedSheet()
+        // Sheet kapanış animasyonu bitsin, sonra push et — aynı runloop'ta
+        // present/dismiss çakışıp navigasyonun düşmesini önler.
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(350))
+            openedMatch = match
+        }
     }
 
     /// Bitmemiş maçların uzak revizyonlarını indirir (misafir katılımı,
