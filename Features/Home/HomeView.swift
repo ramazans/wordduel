@@ -153,9 +153,7 @@ struct HomeView: View {
 
                 Text("VS")
                     .font(.system(size: 18, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(LinearGradient.wdAccentGradient, in: Circle())
+                    .foregroundStyle(Color.wdInkSecondary)
                     .padding(.top, WDSpacing.md)
                     .accessibilityHidden(true)
 
@@ -193,9 +191,6 @@ struct HomeView: View {
                 .font(.system(size: 32, weight: .heavy, design: .rounded))
                 .foregroundStyle(isLeading ? Color.wdAccent : Color.wdInk)
                 .contentTransition(.numericText())
-            Text("galibiyet")
-                .font(.wdCaption)
-                .foregroundStyle(Color.wdInkSecondary)
         }
     }
 
