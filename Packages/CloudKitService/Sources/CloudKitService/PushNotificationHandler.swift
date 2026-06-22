@@ -17,6 +17,10 @@ public enum PushNotificationHandler {
         if let dbNotification = notification as? CKDatabaseNotification {
             return .databaseChanged(scope: dbNotification.databaseScope)
         }
+        // CKQuerySubscription (public DB için kullanılır) CKQueryNotification üretir.
+        if let queryNotification = notification as? CKQueryNotification {
+            return .databaseChanged(scope: queryNotification.databaseScope)
+        }
         return .ignored
     }
 }
