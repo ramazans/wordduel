@@ -53,4 +53,64 @@ struct MatchStats {
         }
         return (wins, draws, losses)
     }
+
+    /// Tek bir rakiple kafa kafaya dökümü. `wins` benim, `losses` rakibin
+    /// galibiyetleri. `lastPlayed` o rakiple oynanan en son maçın tarihidir.
+    struct RivalRecord: Identifiable {
+        let opponent: Player
+        let wins: Int
+        let draws: Int
+        let losses: Int
+        let lastPlayed: Date
+        var id: String { opponent.appleUserID }
+    }
+
+    /// Rakip bazında kafa kafaya dökümler — en son oynanan rakip başta.
+    /// Skorlar yalnızca bitmiş maçlardan sayılır; sıralama ise rakiple olan
+    /// herhangi bir maçın (aktif/bitmiş) en yeni tarihine göredir.
+    func rivals(from matches: [Match]) -> [RivalRecord] {
+        struct Accumulator {
+            var opponent: Player
+            var wins = 0
+            var draws = 0
+            var losses = 0
+            var lastPlayed: Date
+        }
+
+        var grouped: [String: Accumulator] = [:]
+        var order: [String] = []
+
+        for match in matches {
+            guard let opponent = opponent(in: match) else { continue }
+            let key = opponent.appleUserID
+            let date = match.finishedAt ?? match.createdAt
+
+            if grouped[key] == nil {
+                grouped[key] = Accumulator(opponent: opponent, lastPlayed: date)
+                order.append(key)
+            }
+            grouped[key]?.lastPlayed = max(grouped[key]!.lastPlayed, date)
+
+            if match.status == .finished {
+                switch outcome(of: match) {
+                case .win: grouped[key]?.wins += 1
+                case .draw: grouped[key]?.draws += 1
+                case .loss: grouped[key]?.losses += 1
+                }
+            }
+        }
+
+        return order
+            .compactMap { grouped[$0] }
+            .map {
+                RivalRecord(
+                    opponent: $0.opponent,
+                    wins: $0.wins,
+                    draws: $0.draws,
+                    losses: $0.losses,
+                    lastPlayed: $0.lastPlayed
+                )
+            }
+            .sorted { $0.lastPlayed > $1.lastPlayed }
+    }
 }
