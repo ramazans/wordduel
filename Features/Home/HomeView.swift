@@ -16,6 +16,8 @@ struct HomeView: View {
     @State private var reinvite: ReinviteCode?
     /// Rakip koda katılınca host cihazında otomatik açılacak maç.
     @State private var openedMatch: Match?
+    /// Rekabet slider'ında o an görünen rakip (sayfa noktaları için).
+    @State private var activeRivalID: String?
 
     private struct ReinviteCode: Identifiable {
         let code: String
@@ -137,24 +139,75 @@ struct HomeView: View {
         } else if rivals.count == 1 {
             rivalryCard(rivals[0])
         } else {
-            TabView {
-                ForEach(rivals) { rival in
-                    rivalryCard(rival)
-                        .frame(maxHeight: .infinity, alignment: .top)
-                        .padding(.bottom, WDSpacing.lg) // sayfa noktalarına yer aç
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .always))
-            .indexViewStyle(.page(backgroundDisplayMode: .interactive))
-            .frame(height: rivalryCardHeight + WDSpacing.lg)
+            rivalrySlider(rivals)
         }
     }
 
-    /// TabView içindeki kartların eşit hizalanması için yaklaşık kart yüksekliği.
-    private var rivalryCardHeight: CGFloat { 200 }
+    /// Ekran kenarındaki yatay iç boşluk (içerik VStack'inin `.padding(.horizontal)`'ı).
+    private var screenInset: CGFloat { WDSpacing.md }
+    /// Kartın iç içeriği için sabit yükseklik — tüm sayfalar eşit görünsün ve
+    /// "X beraberlik" satırı eklendiğinde içerik kırpılmasın diye.
+    private var rivalryContentHeight: CGFloat { 208 }
+    /// Kart gölgesinin (radius 12) kırpılmadan görünmesi için bırakılan boşluk.
+    private var rivalryShadowPadding: CGFloat { WDSpacing.md }
+
+    /// Yatay, sayfalı rekabet slider'ı. Bir sonraki kartın bir kısmı görünür
+    /// kalır ki kullanıcı kaydırılabileceğini anlasın; gölgelerin kırpılmaması
+    /// için scroll içeriği hem dikey hem yatay yönde nefes payıyla yerleştirilir.
+    private func rivalrySlider(_ rivals: [MatchStats.RivalRecord]) -> some View {
+        // Kartın toplam yüksekliği = iç içerik + .wdCard'ın dikey padding'i (2×lg).
+        let cardHeight = rivalryContentHeight + WDSpacing.lg * 2
+        let active = activeRivalID ?? rivals.first?.id
+
+        return VStack(spacing: WDSpacing.sm) {
+            GeometryReader { geo in
+                // Bir sonraki kartın ucu görünsün diye karta tam genişlikten
+                // biraz dar bir genişlik veriyoruz.
+                let peek = WDSpacing.xl + WDSpacing.sm // ~40pt
+                let cardWidth = max(0, geo.size.width - screenInset * 2 - peek)
+
+                ScrollView(.horizontal) {
+                    HStack(spacing: WDSpacing.md) {
+                        ForEach(rivals) { rival in
+                            rivalryCard(rival, fixedContentHeight: rivalryContentHeight)
+                                .frame(width: cardWidth)
+                        }
+                    }
+                    .scrollTargetLayout()
+                    .padding(.vertical, rivalryShadowPadding)
+                }
+                .contentMargins(.horizontal, screenInset, for: .scrollContent)
+                .scrollTargetBehavior(.viewAligned)
+                .scrollPosition(id: $activeRivalID, anchor: .leading)
+                .scrollIndicators(.hidden)
+            }
+            .frame(height: cardHeight + rivalryShadowPadding * 2)
+            // İçerik VStack'inin yatay padding'ini iptal et: scroll tam ekran
+            // genişliğinde olsun, kenar kartların gölgesi kırpılmasın.
+            .padding(.horizontal, -screenInset)
+
+            rivalryPageDots(rivals: rivals, active: active)
+        }
+    }
+
+    /// Slider'ın altındaki sayfa noktaları — açık zeminde görünür olsun diye
+    /// TabView'ın varsayılan noktaları yerine token renkleriyle çizilir.
+    private func rivalryPageDots(rivals: [MatchStats.RivalRecord], active: String?) -> some View {
+        HStack(spacing: WDSpacing.xs + 2) {
+            ForEach(rivals) { rival in
+                Circle()
+                    .fill(rival.id == active ? Color.wdAccent : Color.wdInkSecondary.opacity(0.25))
+                    .frame(width: 7, height: 7)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: active)
+        .accessibilityHidden(true)
+    }
 
     /// Kafa kafaya rekabet kartı: ben vs tek bir rakip, o rakiple galibiyetler.
-    private func rivalryCard(_ rival: MatchStats.RivalRecord) -> some View {
+    /// `fixedContentHeight` verilirse iç içerik o yüksekliğe sabitlenir (slider'da
+    /// tüm sayfaların eşit görünmesi için).
+    private func rivalryCard(_ rival: MatchStats.RivalRecord, fixedContentHeight: CGFloat? = nil) -> some View {
         let opponent = rival.opponent
 
         return VStack(spacing: WDSpacing.md) {
@@ -194,6 +247,7 @@ struct HomeView: View {
             }
         }
         .frame(maxWidth: .infinity)
+        .frame(height: fixedContentHeight)
         .wdCard(padding: WDSpacing.lg)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
