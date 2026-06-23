@@ -85,19 +85,21 @@ struct MatchStats {
             let key = opponent.appleUserID
             let date = match.finishedAt ?? match.createdAt
 
-            if grouped[key] == nil {
-                grouped[key] = Accumulator(opponent: opponent, lastPlayed: date)
+            var entry = grouped[key]
+            if entry == nil {
+                entry = Accumulator(opponent: opponent, lastPlayed: date)
                 order.append(key)
             }
-            grouped[key]?.lastPlayed = max(grouped[key]!.lastPlayed, date)
+            entry!.lastPlayed = max(entry!.lastPlayed, date)
 
             if match.status == .finished {
                 switch outcome(of: match) {
-                case .win: grouped[key]?.wins += 1
-                case .draw: grouped[key]?.draws += 1
-                case .loss: grouped[key]?.losses += 1
+                case .win: entry!.wins += 1
+                case .draw: entry!.draws += 1
+                case .loss: entry!.losses += 1
                 }
             }
+            grouped[key] = entry
         }
 
         return order
