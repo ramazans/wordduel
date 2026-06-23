@@ -83,11 +83,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: WDSpacing.lg) {
                 greetingHeader
 
-                if let rival {
-                    rivalryCard(rival: rival)
-                } else {
-                    inviteTeaserCard
-                }
+                rivalrySection
 
                 if case .error(let message) = viewModel?.createState {
                     errorBanner(message)
@@ -130,11 +126,36 @@ struct HomeView: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// Kafa kafaya rekabet kartı: ben vs rakibim, toplam galibiyetler.
-    private func rivalryCard(rival: Player) -> some View {
-        let stats = MatchStats(myAppleUserID: myAppleUserID())
-        let record = stats.record(for: matches)
-        let rivalWins = record.losses
+    /// Her rakip için ayrı bir kafa kafaya kartı; birden fazla rakip varsa
+    /// yatay kaydırılabilir slider olarak gösterilir (en son oynanan başta).
+    @ViewBuilder
+    private var rivalrySection: some View {
+        let rivals = MatchStats(myAppleUserID: myAppleUserID()).rivals(from: matches)
+
+        if rivals.isEmpty {
+            inviteTeaserCard
+        } else if rivals.count == 1 {
+            rivalryCard(rivals[0])
+        } else {
+            TabView {
+                ForEach(rivals) { rival in
+                    rivalryCard(rival)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .padding(.bottom, WDSpacing.lg) // sayfa noktalarına yer aç
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .always))
+            .indexViewStyle(.page(backgroundDisplayMode: .interactive))
+            .frame(height: rivalryCardHeight + WDSpacing.lg)
+        }
+    }
+
+    /// TabView içindeki kartların eşit hizalanması için yaklaşık kart yüksekliği.
+    private var rivalryCardHeight: CGFloat { 200 }
+
+    /// Kafa kafaya rekabet kartı: ben vs tek bir rakip, o rakiple galibiyetler.
+    private func rivalryCard(_ rival: MatchStats.RivalRecord) -> some View {
+        let opponent = rival.opponent
 
         return VStack(spacing: WDSpacing.md) {
             Text("Ezeli Rekabet")
@@ -146,8 +167,8 @@ struct HomeView: View {
                 rivalryColumn(
                     name: me?.displayName ?? "Sen",
                     colorIndex: me?.avatarColor ?? 0,
-                    wins: record.wins,
-                    isLeading: record.wins > rivalWins
+                    wins: rival.wins,
+                    isLeading: rival.wins > rival.losses
                 )
                 .frame(maxWidth: .infinity)
 
@@ -158,16 +179,16 @@ struct HomeView: View {
                     .accessibilityHidden(true)
 
                 rivalryColumn(
-                    name: rival.displayName,
-                    colorIndex: rival.avatarColor,
-                    wins: rivalWins,
-                    isLeading: rivalWins > record.wins
+                    name: opponent.displayName,
+                    colorIndex: opponent.avatarColor,
+                    wins: rival.losses,
+                    isLeading: rival.losses > rival.wins
                 )
                 .frame(maxWidth: .infinity)
             }
 
-            if record.draws > 0 {
-                Text("\(record.draws) beraberlik")
+            if rival.draws > 0 {
+                Text("\(rival.draws) beraberlik")
                     .font(.wdCaption)
                     .foregroundStyle(Color.wdInkSecondary)
             }
@@ -176,7 +197,7 @@ struct HomeView: View {
         .wdCard(padding: WDSpacing.lg)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
-            "Rekabet: \(me?.displayName ?? "Sen") \(record.wins) galibiyet, \(rival.displayName) \(rivalWins) galibiyet, \(record.draws) beraberlik"
+            "Rekabet: \(me?.displayName ?? "Sen") \(rival.wins) galibiyet, \(opponent.displayName) \(rival.losses) galibiyet, \(rival.draws) beraberlik"
         )
     }
 
