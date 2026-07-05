@@ -433,4 +433,103 @@ final class MatchEngineTests: XCTestCase {
         // distance 4, length 5 → tolerance 1 → not correct, but >0 → manual review
         XCTAssertEqual(verdict, .needsManualReview)
     }
+
+    // MARK: - Çoktan seçmeli format
+
+    func test36_multipleChoiceCorrectOptionAwardsNoPoints() async throws {
+        let engine = MatchEngine()
+        let options = ["vazgeçmek, bırakmak", "ertelemek", "aramak", "devam etmek"]
+        try await engine.askWord(
+            "give up", expectedAnswer: "vazgeçmek, bırakmak", asker: .host,
+            format: .multipleChoice, options: options
+        )
+        let verdict = try await engine.submitAnswer("vazgeçmek, bırakmak")
+        XCTAssertEqual(verdict, .correct)
+
+        let snap = await engine.snapshot()
+        XCTAssertEqual(snap.hostScore, 0)
+        XCTAssertEqual(snap.phase, .reviewed)
+        XCTAssertTrue(snap.pending.isEmpty)
+    }
+
+    func test37_multipleChoiceWrongOptionScoresAndRequeues() async throws {
+        let engine = MatchEngine()
+        try await engine.askWord(
+            "give up", expectedAnswer: "vazgeçmek, bırakmak", asker: .guest,
+            format: .multipleChoice, options: ["vazgeçmek, bırakmak", "ertelemek", "aramak", "devam etmek"]
+        )
+        let verdict = try await engine.submitAnswer("ertelemek")
+        // Serbest metinde "ertelemek" manuel incelemeye düşerdi; MCQ'da kesin yanlış.
+        XCTAssertEqual(verdict, .wrong)
+
+        let snap = await engine.snapshot()
+        XCTAssertEqual(snap.guestScore, 2)
+        XCTAssertEqual(snap.pending.count, 1)
+        XCTAssertEqual(snap.pending.first?.weight, 2)
+        XCTAssertEqual(snap.phase, .reviewed)
+    }
+
+    func test38_multipleChoiceNeverEntersManualReview() async throws {
+        let engine = MatchEngine()
+        try await engine.askWord(
+            "cat", expectedAnswer: "kedi", asker: .host,
+            format: .multipleChoice, options: ["kedi", "köpek", "kuş", "kefal"]
+        )
+        // "kefal" vs "kedi": serbest metinde kısa kelime → manuel inceleme olurdu.
+        let verdict = try await engine.submitAnswer("kefal")
+        XCTAssertEqual(verdict, .wrong)
+        let snap = await engine.snapshot()
+        XCTAssertEqual(snap.phase, .reviewed)
+    }
+
+    func test39_multipleChoiceTimeoutIsWrong() async throws {
+        let engine = MatchEngine()
+        try await engine.askWord(
+            "dog", expectedAnswer: "köpek", asker: .host,
+            format: .multipleChoice, options: ["kedi", "köpek", "kuş", "at"]
+        )
+        let verdict = try await engine.submitAnswer(nil)
+        XCTAssertEqual(verdict, .wrong)
+        let snap = await engine.snapshot()
+        XCTAssertEqual(snap.hostScore, 2)
+    }
+
+    func test40_repeatOfMissedMCQCanBeAskedAsText() async throws {
+        let engine = MatchEngine()
+        try await engine.askWord(
+            "give up", expectedAnswer: "vazgeçmek", asker: .host,
+            format: .multipleChoice, options: ["vazgeçmek", "ertelemek", "aramak", "koşmak"]
+        )
+        _ = try await engine.submitAnswer("ertelemek") // yanlış → kuyruğa weight 2
+        try await engine.advance()
+
+        for _ in 0..<3 { // tekrar vadesi gelsin diye 3 tur oyna
+            try await engine.askWord("filler", expectedAnswer: "dolgu sözcük", asker: .guest)
+            _ = try await engine.submitAnswer("dolgu sözcük")
+            try await engine.advance()
+        }
+
+        let due = await engine.dueRepeats()
+        XCTAssertEqual(due.count, 1)
+        // Tekrar bu kez serbest metin olarak sorulur — format kuyrukta saklanmaz.
+        try await engine.askRepeat(due[0], asker: .host)
+        let round = await engine.snapshot().activeRound
+        XCTAssertEqual(round?.format, .text)
+        XCTAssertEqual(round?.weight, 2)
+
+        let verdict = try await engine.submitAnswer("vazgeçmek")
+        XCTAssertEqual(verdict, .correct)
+    }
+
+    func test41_activeRoundCarriesFormatAndOptions() async throws {
+        let engine = MatchEngine()
+        let options = ["kedi", "köpek", "kuş", "at"]
+        try await engine.askWord(
+            "cat", expectedAnswer: "kedi", asker: .host,
+            format: .multipleChoice, options: options
+        )
+        let round = await engine.snapshot().activeRound
+        XCTAssertEqual(round?.format, .multipleChoice)
+        XCTAssertEqual(round?.options, options)
+    }
 }

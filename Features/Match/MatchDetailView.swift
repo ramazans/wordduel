@@ -86,13 +86,13 @@ struct MatchDetailView: View {
                     roundNumber: match.currentRoundIndex + 1,
                     totalRounds: match.totalRounds,
                     dueRepeats: flow.dueRepeats(for: asker),
-                    onAsk: { word, expected in
-                        flow.askWord(word, expectedAnswer: expected, asker: asker)
+                    onAsk: { request in
+                        flow.askWord(request, asker: asker)
                         SoundPlayer.shared.play(.send)
                         save()
                     },
-                    onAskRepeat: { item in
-                        flow.askRepeat(item, asker: asker)
+                    onAskRepeat: { item, format, options in
+                        flow.askRepeat(item, format: format, options: options, asker: asker)
                         SoundPlayer.shared.play(.send)
                         save()
                     }
@@ -114,6 +114,9 @@ struct MatchDetailView: View {
                         word: round.word,
                         startedAt: round.startedAt ?? .now,
                         durationSeconds: match.roundTimerSeconds,
+                        format: round.format,
+                        options: round.options,
+                        kindLabel: kindLabel(for: round.kind),
                         onSubmit: { answer in
                             flow.submitAnswer(answer)
                             save()
@@ -368,6 +371,15 @@ struct MatchDetailView: View {
     }
 
     private var opponent: Player? { stats.opponent(in: match) }
+
+    /// WordCard'daki tür rozeti: düz kelimede rozet gösterilmez.
+    private func kindLabel(for kind: ContentKind) -> String? {
+        switch kind {
+        case .word: return nil
+        case .idiom: return "Deyim"
+        case .phrasal: return "Phrasal Verb"
+        }
+    }
 
     /// Yerel mutasyonu kaydeder ve rakibin görmesi için yeni revizyon olarak yayınlar.
     private func save() {

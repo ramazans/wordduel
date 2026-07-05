@@ -36,6 +36,11 @@ public struct MatchStateSnapshot: Codable, Sendable {
         public var originRoundIndex: Int?
         public var startedAt: Date?
         public var resolvedAt: Date?
+        // Opsiyonel: eski istemcilerin snapshot'larında bu anahtarlar yok,
+        // decode `nil`e düşer; `apply` default'ları basar.
+        public var kindRaw: String?
+        public var formatRaw: String?
+        public var options: [String]?
 
         public init(round: Round) {
             self.index = round.index
@@ -49,6 +54,10 @@ public struct MatchStateSnapshot: Codable, Sendable {
             self.originRoundIndex = round.originRoundIndex
             self.startedAt = round.startedAt
             self.resolvedAt = round.resolvedAt
+            self.kindRaw = round.kindRaw
+            self.formatRaw = round.formatRaw
+            let options = round.options
+            self.options = options.isEmpty ? nil : options
         }
     }
 
@@ -125,6 +134,9 @@ public struct MatchStateSnapshot: Codable, Sendable {
                 existing.originRoundIndex = snapshot.originRoundIndex
                 existing.startedAt = snapshot.startedAt
                 existing.resolvedAt = snapshot.resolvedAt
+                existing.kindRaw = snapshot.kindRaw ?? "word"
+                existing.formatRaw = snapshot.formatRaw ?? "text"
+                existing.options = snapshot.options ?? []
             } else {
                 let round = Round(
                     index: snapshot.index,
@@ -132,7 +144,10 @@ public struct MatchStateSnapshot: Codable, Sendable {
                     word: snapshot.word,
                     expectedAnswer: snapshot.expectedAnswer,
                     isRepeat: snapshot.isRepeat,
-                    originRoundIndex: snapshot.originRoundIndex
+                    originRoundIndex: snapshot.originRoundIndex,
+                    kind: ContentKind(rawValue: snapshot.kindRaw ?? "word") ?? .word,
+                    format: AnswerFormat(rawValue: snapshot.formatRaw ?? "text") ?? .text,
+                    options: snapshot.options ?? []
                 )
                 round.answerGiven = snapshot.answerGiven
                 round.judgementRaw = snapshot.judgementRaw

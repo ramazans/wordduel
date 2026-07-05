@@ -14,6 +14,11 @@ public final class Round {
     public var originRoundIndex: Int?
     public var startedAt: Date?
     public var resolvedAt: Date?
+    public var kindRaw: String = "word"
+    public var formatRaw: String = "text"
+    /// Çoktan seçmeli turlarda 4 şık, JSON `[String]` olarak saklanır
+    /// (SwiftData'nın CloudKit uyumu için `Match.pendingRepeatsData` kalıbı).
+    public var optionsData: Data = Data()
 
     public var match: Match?
 
@@ -27,13 +32,36 @@ public final class Round {
         set { judgementRaw = newValue.rawValue }
     }
 
+    public var kind: ContentKind {
+        get { ContentKind(rawValue: kindRaw) ?? .word }
+        set { kindRaw = newValue.rawValue }
+    }
+
+    public var format: AnswerFormat {
+        get { AnswerFormat(rawValue: formatRaw) ?? .text }
+        set { formatRaw = newValue.rawValue }
+    }
+
+    public var options: [String] {
+        get {
+            guard !optionsData.isEmpty else { return [] }
+            return (try? JSONDecoder().decode([String].self, from: optionsData)) ?? []
+        }
+        set {
+            optionsData = newValue.isEmpty ? Data() : ((try? JSONEncoder().encode(newValue)) ?? Data())
+        }
+    }
+
     public init(
         index: Int,
         askerRole: AskerRole,
         word: String,
         expectedAnswer: String,
         isRepeat: Bool = false,
-        originRoundIndex: Int? = nil
+        originRoundIndex: Int? = nil,
+        kind: ContentKind = .word,
+        format: AnswerFormat = .text,
+        options: [String] = []
     ) {
         self.index = index
         self.askerRoleRaw = askerRole.rawValue
@@ -43,5 +71,8 @@ public final class Round {
         self.pointsAwarded = 0
         self.isRepeat = isRepeat
         self.originRoundIndex = originRoundIndex
+        self.kindRaw = kind.rawValue
+        self.formatRaw = format.rawValue
+        self.optionsData = options.isEmpty ? Data() : ((try? JSONEncoder().encode(options)) ?? Data())
     }
 }

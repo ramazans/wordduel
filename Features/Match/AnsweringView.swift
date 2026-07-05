@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreModels
 import MatchEngine
 import DesignSystem
 
@@ -6,10 +7,15 @@ struct AnsweringView: View {
     let word: String
     let startedAt: Date
     let durationSeconds: Int
+    var format: AnswerFormat = .text
+    var options: [String] = []
+    /// "Deyim" / "Phrasal Verb" — düz kelimede nil.
+    var kindLabel: String?
     let onSubmit: (String) -> Void
 
     @State private var answer: String = ""
     @State private var hasSubmitted = false
+    @State private var selectedOption: String?
     @State private var lastWarningTriggered = false
     @FocusState private var answerFocused: Bool
 
@@ -17,47 +23,99 @@ struct AnsweringView: View {
         Countdown(startedAt: startedAt, durationSeconds: durationSeconds)
     }
 
+    private var isMultipleChoice: Bool {
+        format == .multipleChoice && options.count >= 2
+    }
+
     var body: some View {
         VStack(spacing: WDSpacing.lg) {
             timer
 
-            WordCard(word: word)
+            WordCard(word: word, hint: kindLabel)
 
-            VStack(alignment: .leading, spacing: WDSpacing.sm) {
-                TextField("Türkçe karşılığını yaz…", text: $answer)
-                    .font(.wdBody)
-                    .padding(14)
-                    .background(
-                        Color.wdSurfaceSecondary,
-                        in: RoundedRectangle(cornerRadius: WDRadius.md, style: .continuous)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: WDRadius.md, style: .continuous)
-                            .strokeBorder(
-                                answerFocused ? Color.wdAccent : Color.wdSeparator.opacity(0.4),
-                                lineWidth: answerFocused ? 1.5 : 0.5
-                            )
-                    )
-                    .focused($answerFocused)
-                    .submitLabel(.send)
-                    .disabled(hasSubmitted)
-                    .onSubmit { submit(answer) }
+            if isMultipleChoice {
+                optionButtons
+            } else {
+                freeTextInput
 
-                Text("Küçük yazım hataları sorun değil — rakibin değerlendirecek.")
-                    .font(.wdCaption)
-                    .foregroundStyle(Color.wdInkSecondary)
+                PrimaryButton("Gönder", systemImage: "paperplane.fill") {
+                    submit(answer)
+                }
+                .disabled(hasSubmitted || answer.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-
-            PrimaryButton("Gönder", systemImage: "paperplane.fill") {
-                submit(answer)
-            }
-            .disabled(hasSubmitted || answer.trimmingCharacters(in: .whitespaces).isEmpty)
 
             Spacer()
         }
         .padding()
         .background(Color.wdBackground)
-        .onAppear { answerFocused = true }
+        .onAppear {
+            if !isMultipleChoice { answerFocused = true }
+        }
+    }
+
+    // MARK: - Serbest metin
+
+    private var freeTextInput: some View {
+        VStack(alignment: .leading, spacing: WDSpacing.sm) {
+            TextField("Türkçe karşılığını yaz…", text: $answer)
+                .font(.wdBody)
+                .padding(14)
+                .background(
+                    Color.wdSurfaceSecondary,
+                    in: RoundedRectangle(cornerRadius: WDRadius.md, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: WDRadius.md, style: .continuous)
+                        .strokeBorder(
+                            answerFocused ? Color.wdAccent : Color.wdSeparator.opacity(0.4),
+                            lineWidth: answerFocused ? 1.5 : 0.5
+                        )
+                )
+                .focused($answerFocused)
+                .submitLabel(.send)
+                .disabled(hasSubmitted)
+                .onSubmit { submit(answer) }
+
+            Text("Küçük yazım hataları sorun değil — rakibin değerlendirecek.")
+                .font(.wdCaption)
+                .foregroundStyle(Color.wdInkSecondary)
+        }
+    }
+
+    // MARK: - Çoktan seçmeli
+
+    /// 4 şık; dokunmak cevabı anında gönderir (yazım hatası olamayacağı için
+    /// onay adımı yok). Gönderim sonrası tüm şıklar kilitlenir.
+    private var optionButtons: some View {
+        VStack(spacing: WDSpacing.sm) {
+            ForEach(options, id: \.self) { option in
+                Button {
+                    selectedOption = option
+                    submit(option)
+                } label: {
+                    Text(option)
+                        .font(.wdHeadline)
+                        .foregroundStyle(Color.wdInk)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .background(
+                            Color.wdSurfaceSecondary,
+                            in: RoundedRectangle(cornerRadius: WDRadius.md, style: .continuous)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: WDRadius.md, style: .continuous)
+                                .strokeBorder(
+                                    selectedOption == option ? Color.wdAccent : Color.wdSeparator.opacity(0.4),
+                                    lineWidth: selectedOption == option ? 1.5 : 0.5
+                                )
+                        )
+                }
+                .buttonStyle(WDPressableButtonStyle())
+                .disabled(hasSubmitted)
+                .accessibilityHint("Bu şıkkı cevap olarak gönderir")
+            }
+        }
     }
 
     @ViewBuilder

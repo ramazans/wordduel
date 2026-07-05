@@ -55,6 +55,14 @@ public actor MatchEngine {
         case tie
     }
 
+    /// Cevap formatı. CoreModels'teki `AnswerFormat` ile bilinçli olarak
+    /// kopya (paketler ayrık — `AskerRole` gibi). İçerik türü (kelime/deyim/
+    /// phrasal) motora girmez; kuralları etkilemez.
+    public enum AnswerFormat: String, Sendable, Equatable {
+        case text
+        case multipleChoice
+    }
+
     public struct PendingItem: Sendable, Equatable, Hashable {
         public let word: String
         public let expectedAnswer: String
@@ -77,6 +85,9 @@ public actor MatchEngine {
         public let weight: Int
         public let isRepeat: Bool
         public let originIndex: Int?
+        public let format: AnswerFormat
+        /// Çoktan seçmeli turda gösterilen şıklar (doğru cevap dahil, karışık).
+        public let options: [String]
         public var answerGiven: String?
         public var autoVerdict: AnswerNormalizer.AutoVerdict?
     }
@@ -156,7 +167,9 @@ public actor MatchEngine {
     public func askWord(
         _ word: String,
         expectedAnswer: String,
-        asker: AskerRole
+        asker: AskerRole,
+        format: AnswerFormat = .text,
+        options: [String] = []
     ) throws {
         try requirePhase(.idle)
         try startRound(
@@ -165,16 +178,21 @@ public actor MatchEngine {
             asker: asker,
             weight: config.initialWeight,
             isRepeat: false,
-            originIndex: nil
+            originIndex: nil,
+            format: format,
+            options: options
         )
     }
 
     /// Kuyruktan bir tekrarı tüketip o kelimeyi sorar. Yalnızca `.idle`'da çalışır.
+    /// Format yeniden sorarken seçilir; şıklar taze üretilip verilir (kuyrukta saklanmaz).
     /// - Throws: `EngineError.repeatNotInQueue` eğer item kuyrukta değilse.
     public func askRepeat(
         _ item: PendingItem,
         asker: AskerRole,
-        originIndex: Int? = nil
+        originIndex: Int? = nil,
+        format: AnswerFormat = .text,
+        options: [String] = []
     ) throws {
         try requirePhase(.idle)
         guard let idx = pending.firstIndex(of: item) else {
@@ -187,7 +205,9 @@ public actor MatchEngine {
             asker: asker,
             weight: item.weight,
             isRepeat: true,
-            originIndex: originIndex
+            originIndex: originIndex,
+            format: format,
+            options: options
         )
     }
 
@@ -197,7 +217,9 @@ public actor MatchEngine {
         asker: AskerRole,
         weight: Int,
         isRepeat: Bool,
-        originIndex: Int?
+        originIndex: Int?,
+        format: AnswerFormat,
+        options: [String]
     ) throws {
         activeRound = ActiveRound(
             index: currentRoundIndex,
@@ -207,6 +229,8 @@ public actor MatchEngine {
             weight: weight,
             isRepeat: isRepeat,
             originIndex: originIndex,
+            format: format,
+            options: options,
             answerGiven: nil,
             autoVerdict: nil
         )
@@ -224,6 +248,10 @@ public actor MatchEngine {
         let verdict: AnswerNormalizer.AutoVerdict
         if trimmed.isEmpty {
             verdict = .wrong
+        } else if round.format == .multipleChoice {
+            // Şık dokunuşu yazım hatası olamaz: tam eşitlik, manuel inceleme yok.
+            verdict = AnswerNormalizer.normalize(trimmed) == AnswerNormalizer.normalize(round.expectedAnswer)
+                ? .correct : .wrong
         } else {
             verdict = AnswerNormalizer.autoJudge(answer: trimmed, expected: round.expectedAnswer)
         }
