@@ -27,7 +27,7 @@ public struct TimerRing: View {
             Circle()
                 .trim(from: 0, to: max(0, min(1, progress)))
                 .stroke(
-                    ringColor,
+                    ringStyle,
                     style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
@@ -36,7 +36,7 @@ public struct TimerRing: View {
 
             VStack(spacing: 0) {
                 Text("\(remainingSeconds)")
-                    .font(.system(size: size * 0.32, weight: .bold, design: .rounded))
+                    .font(.system(size: size * 0.32, weight: .heavy, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(isCritical ? Color.wdDanger : Color.wdInk)
                     .contentTransition(.numericText(countsDown: true))
@@ -51,10 +51,13 @@ public struct TimerRing: View {
         .accessibilityLabel("Kalan süre \(remainingSeconds) saniye")
     }
 
-    private var lineWidth: CGFloat { size * 0.085 }
+    private var lineWidth: CGFloat { size * 0.1 }
 
-    private var ringColor: Color {
-        isCritical ? .wdDanger : .wdAccent
+    /// Normalde bonbon pembesi gradyan, kritik eşikte kiraz kırmızısı.
+    private var ringStyle: AnyShapeStyle {
+        isCritical
+            ? AnyShapeStyle(Color.wdDanger)
+            : AnyShapeStyle(LinearGradient.wdAccentGradient)
     }
 }
 

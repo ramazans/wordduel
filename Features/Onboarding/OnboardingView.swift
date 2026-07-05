@@ -63,9 +63,9 @@ struct OnboardingView: View {
 
     private var onboardingBackground: some View {
         ZStack {
-            Color.wdBackground
+            LinearGradient.wdScreenGradient
             LinearGradient(
-                colors: [Color.wdAccent.opacity(0.1), .clear],
+                colors: [Color.wdAccent.opacity(0.12), .clear],
                 startPoint: .top,
                 endPoint: .center
             )

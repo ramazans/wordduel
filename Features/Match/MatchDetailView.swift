@@ -45,7 +45,7 @@ struct MatchDetailView: View {
                         .frame(maxHeight: .infinity)
                 }
                 .padding(.top, WDSpacing.sm)
-                .background(Color.wdBackground)
+                .wdScreenBackground()
                 .navigationTitle(opponent?.displayName ?? "Maç")
                 .navigationBarTitleDisplayMode(.inline)
             }

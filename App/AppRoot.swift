@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import CoreModels
 import AuthService
+import DesignSystem
 
 /// Auth durumuna göre root switch.
 struct AppRoot: View {
@@ -26,6 +27,8 @@ struct AppRoot: View {
                 OnboardingView()
             }
         }
+        // King Style: toolbar, link ve kontroller marka bonbon pembesini alır.
+        .tint(.wdAccent)
         .task {
             await authController.bootstrap(modelContext: modelContext)
         }

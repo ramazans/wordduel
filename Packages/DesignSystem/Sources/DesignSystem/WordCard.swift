@@ -24,7 +24,7 @@ public struct WordCard: View {
             }
 
             Text(word)
-                .font(.system(size: 44, weight: .bold, design: .rounded))
+                .font(.system(size: 44, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color.wdInk)
                 .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.5)
@@ -36,12 +36,12 @@ public struct WordCard: View {
                 ))
 
             if let hint, !hint.isEmpty {
-                Text(hint.uppercased())
+                Label(hint.uppercased(), systemImage: "star.fill")
                     .font(.wdLabel)
-                    .foregroundStyle(Color.wdInkSecondary)
+                    .foregroundStyle(Color.wdGoldEdge)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(Color.wdSurfaceSecondary, in: Capsule())
+                    .background(Color.wdGold.opacity(0.18), in: Capsule())
             }
         }
         .padding(WDSpacing.xl)

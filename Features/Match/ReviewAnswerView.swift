@@ -60,21 +60,12 @@ struct ReviewAnswerView: View {
 
                 Button(action: onAccept) {
                     Label("Doğru", systemImage: "checkmark")
-                        .font(.wdHeadline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .foregroundStyle(.white)
-                        .background(
-                            Color.wdSuccess,
-                            in: RoundedRectangle(cornerRadius: WDRadius.md, style: .continuous)
-                        )
-                        .shadow(color: Color.wdSuccess.opacity(0.3), radius: 10, x: 0, y: 5)
                 }
-                .buttonStyle(WDPressableButtonStyle())
+                .buttonStyle(WDProminentButtonStyle(.success))
             }
         }
         .padding()
-        .background(Color.wdBackground)
+        .wdScreenBackground()
     }
 
     private func answerRow(title: String, value: String, systemImage: String, tint: Color) -> some View {

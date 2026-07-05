@@ -25,7 +25,7 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             content
-                .background(Color.wdBackground)
+                .wdScreenBackground()
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { profileToolbar }
                 .safeAreaInset(edge: .bottom) { actionBar }

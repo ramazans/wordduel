@@ -152,6 +152,8 @@ struct SettingsView: View {
                 Text("Hesap silme tüm maçlarını ve geçmişini kalıcı olarak siler.")
             }
         }
+        .scrollContentBackground(.hidden)
+        .wdScreenBackground()
         .navigationTitle("Ayarlar")
         .task { await refreshAuthorizationStatus() }
         .confirmationDialog(

@@ -34,7 +34,7 @@ struct HistoryView: View {
                 }
             }
         }
-        .background(Color.wdBackground)
+        .wdScreenBackground()
         .navigationTitle("Geçmiş")
     }
 

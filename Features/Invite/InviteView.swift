@@ -50,7 +50,7 @@ struct InviteView: View {
             }
             .padding()
             .padding(.top, WDSpacing.md)
-            .background(Color.wdBackground)
+            .wdScreenBackground()
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Kapat", action: onDismiss)

@@ -47,7 +47,7 @@ struct AnsweringView: View {
             Spacer()
         }
         .padding()
-        .background(Color.wdBackground)
+        .wdScreenBackground()
         .onAppear {
             if !isMultipleChoice { answerFocused = true }
         }

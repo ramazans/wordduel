@@ -248,7 +248,7 @@ struct ScoreboardView: View {
 
     private var celebrationBackground: some View {
         ZStack {
-            Color.wdBackground
+            LinearGradient.wdScreenGradient
             RadialGradient(
                 colors: [accentForWinner.opacity(0.18), .clear],
                 center: .top,

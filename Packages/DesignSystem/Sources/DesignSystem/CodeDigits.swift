@@ -12,12 +12,17 @@ public struct CodeDigitsView: View {
         HStack(spacing: WDSpacing.sm) {
             ForEach(Array(code.enumerated()), id: \.offset) { _, character in
                 Text(String(character))
-                    .font(.system(size: 28, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color.wdInk)
+                    .font(.system(size: 28, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.wdAccent)
                     .frame(width: 44, height: 56)
                     .background(
-                        Color.wdSurfaceSecondary,
-                        in: RoundedRectangle(cornerRadius: WDRadius.sm, style: .continuous)
+                        RoundedRectangle(cornerRadius: WDRadius.sm, style: .continuous)
+                            .fill(Color.wdSurface)
+                            .shadow(color: .wdSurfaceEdge, radius: 0, x: 0, y: WDBevel.card)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: WDRadius.sm, style: .continuous)
+                            .strokeBorder(Color.wdSeparator.opacity(0.6), lineWidth: 1)
                     )
             }
         }
@@ -74,17 +79,18 @@ public struct CodeInputField: View {
         let isActive = isFocused && index == min(code.count, length - 1) && code.count < length
 
         RoundedRectangle(cornerRadius: WDRadius.sm, style: .continuous)
-            .fill(Color.wdSurfaceSecondary)
+            .fill(Color.wdSurface)
+            .shadow(color: .wdSurfaceEdge, radius: 0, x: 0, y: WDBevel.card)
             .overlay(
                 RoundedRectangle(cornerRadius: WDRadius.sm, style: .continuous)
                     .strokeBorder(
-                        isActive ? Color.wdAccent : Color.wdSeparator.opacity(0.4),
-                        lineWidth: isActive ? 2 : 0.5
+                        isActive ? Color.wdAccent : Color.wdSeparator.opacity(0.6),
+                        lineWidth: isActive ? 2.5 : 1
                     )
             )
             .overlay(
                 Text(index < characters.count ? String(characters[index]) : "")
-                    .font(.system(size: 26, weight: .bold, design: .monospaced))
+                    .font(.system(size: 26, weight: .heavy, design: .rounded))
                     .foregroundStyle(Color.wdInk)
             )
             .frame(width: 46, height: 58)

@@ -24,20 +24,24 @@ public struct AvatarView: View {
             Circle()
                 .fill(AvatarPalette.color(for: colorIndex).gradient)
             Text(initial)
-                .font(.system(size: size * 0.42, weight: .bold, design: .rounded))
+                .font(.system(size: size * 0.42, weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
         }
         .frame(width: size, height: size)
+        .overlay(
+            // King tarzı kalın çerçeve — yüzey renginde halka.
+            Circle().strokeBorder(Color.wdSurface, lineWidth: max(2, size * 0.05))
+        )
         .overlay {
             if isHighlighted {
                 Circle()
-                    .strokeBorder(Color.wdGold, lineWidth: 3)
+                    .strokeBorder(LinearGradient.wdGoldGradient, lineWidth: 3.5)
                     .padding(-5)
             }
         }
         .shadow(
-            color: AvatarPalette.color(for: colorIndex).opacity(0.35),
-            radius: size / 8, x: 0, y: size / 16
+            color: AvatarPalette.color(for: colorIndex).opacity(0.4),
+            radius: size / 8, x: 0, y: size / 14
         )
         .accessibilityHidden(true)
     }

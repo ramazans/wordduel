@@ -57,7 +57,7 @@ struct AskingView: View {
                 customMode
             }
         }
-        .background(Color.wdBackground)
+        .wdScreenBackground()
         .navigationTitle("Tur \(roundNumber) / \(totalRounds)")
         .navigationBarTitleDisplayMode(.inline)
         .task { loadWords() }

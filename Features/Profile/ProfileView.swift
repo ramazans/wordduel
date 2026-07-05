@@ -39,7 +39,7 @@ struct ProfileView: View {
             }
             .padding()
         }
-        .background(Color.wdBackground)
+        .wdScreenBackground()
         .navigationTitle("Profil")
         .navigationBarTitleDisplayMode(.inline)
     }

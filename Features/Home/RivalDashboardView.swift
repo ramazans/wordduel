@@ -40,7 +40,7 @@ struct RivalDashboardView: View {
             .padding(.horizontal)
             .padding(.vertical, WDSpacing.md)
         }
-        .background(Color.wdBackground)
+        .wdScreenBackground()
         .navigationTitle(opponent.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await pullRemoteUpdates() }

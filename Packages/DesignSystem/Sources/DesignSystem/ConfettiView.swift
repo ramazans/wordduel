@@ -40,7 +40,7 @@ public struct ConfettiView: View {
     public init(
         pieceCount: Int = 140,
         emitDuration: Double = 2.0,
-        colors: [Color] = [.red, .orange, .yellow, .green, .mint, .blue, .purple, .pink]
+        colors: [Color] = AvatarPalette.colors
     ) {
         self.colors = colors
         // En geç bırakılan ve en yavaş düşen parçacığın ekranı terk etme süresi.

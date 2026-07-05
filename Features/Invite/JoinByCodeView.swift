@@ -68,7 +68,7 @@ struct JoinByCodeView: View {
             }
             .padding()
             .padding(.top, WDSpacing.md)
-            .background(Color.wdBackground)
+            .wdScreenBackground()
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Vazgeç") { dismiss() }

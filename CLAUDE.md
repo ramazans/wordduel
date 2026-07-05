@@ -103,17 +103,19 @@ Key files:
 
 `AuthController` stores `appleUserID` in `UserDefaults`. On launch, `bootstrap` immediately restores `.signedIn` from storage, then asynchronously checks Apple credential state — only `.revoked` triggers sign-out. Apple's display name arrives only on first sign-in; subsequent launches restore it from Keychain via `KeychainProfileStore`. If the stored name is auto-generated (placeholder), `AppRoot` routes to `NameEntryView`.
 
-### Design System Conventions
+### Design System Conventions (King Style UI)
 
-All UI must use tokens from `DesignSystem`:
-- Colors: `Color.wdAccent`, `.wdInk`, `.wdInkSecondary`, `.wdSurface`, `.wdSurfaceSecondary`, `.wdSuccess`, `.wdDanger`, `.wdWarning`
-- Gradients: `LinearGradient.wdAccentGradient` (primary CTA), `.wdGoldGradient`
+The app uses a "King Style" candy-game design language: saturated candy colors on a lavender-sky gradient background, chunky 3D beveled buttons, and heavy rounded typography. All UI must use tokens from `DesignSystem`:
+- Colors: `Color.wdAccent` (candy pink), `.wdInk`, `.wdInkSecondary`, `.wdSurface`, `.wdSurfaceSecondary`, `.wdSuccess`, `.wdDanger`, `.wdWarning`, `.wdGold`; each action color has a darker `…Edge` counterpart (`.wdAccentEdge`, `.wdSuccessEdge`, `.wdDangerEdge`, `.wdGoldEdge`, `.wdSurfaceEdge`) used for the 3D bottom bevel
+- Gradients: `LinearGradient.wdAccentGradient` (primary CTA), `.wdSuccessGradient` (confirm/play), `.wdGoldGradient`, `.wdScreenGradient` (screen background)
+- Screen background: `.wdScreenBackground()` view modifier — full-bleed lavender gradient; prefer it over flat `Color.wdBackground`
 - Spacing: `WDSpacing.xs/sm/md/lg/xl` (4pt rhythm)
 - Corner radius: `WDRadius.sm/md/lg/xl` — always `.continuous` style
-- Typography: `Font.wdDisplay`, `.wdTitle`, `.wdHeadline`, `.wdSubheadline`, `.wdLabel`, `.wdCaption` (rounded system font)
-- Card surface: `.wdCard()` view modifier
-- Buttons: `WDProminentButtonStyle(.primary/.secondary/.destructive)` and `WDPressableButtonStyle`
-- Avatar: `AvatarView(name:colorIndex:size:)` with `AvatarPalette.color(for:)`
+- Bevel heights: `WDBevel.card/button` — the hard bottom edge is drawn with a zero-radius shadow offset by the bevel height
+- Typography: `Font.wdDisplay`, `.wdTitle`, `.wdHeadline`, `.wdSubheadline`, `.wdLabel`, `.wdCaption` (all rounded system font, heavy headline weights)
+- Card surface: `.wdCard()` view modifier (candy panel with bottom bevel)
+- Buttons: `WDProminentButtonStyle(.primary/.secondary/.destructive/.success)` (3D beveled, presses down onto its edge) and `WDPressableButtonStyle`
+- Avatar: `AvatarView(name:colorIndex:size:)` with `AvatarPalette.color(for:)` (candy palette, thick surface-colored ring)
 
 ### Swift 6 Strict Concurrency
 
