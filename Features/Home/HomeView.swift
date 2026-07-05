@@ -16,8 +16,6 @@ struct HomeView: View {
     @State private var reinvite: ReinviteCode?
     /// Rakip koda katılınca host cihazında otomatik açılacak maç.
     @State private var openedMatch: Match?
-    /// Rekabet slider'ında o an görünen rakip (sayfa noktaları için).
-    @State private var activeRivalID: String?
 
     private struct ReinviteCode: Identifiable {
         let code: String
@@ -85,7 +83,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: WDSpacing.lg) {
                 greetingHeader
 
-                rivalrySection
+                rivalsSection
 
                 if case .error(let message) = viewModel?.createState {
                     errorBanner(message)
@@ -128,145 +126,61 @@ struct HomeView: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// Her rakip için ayrı bir kafa kafaya kartı; birden fazla rakip varsa
-    /// yatay kaydırılabilir slider olarak gösterilir (en son oynanan başta).
+    /// Yarışılan oyuncuların listesi — en son oynanan başta. Satıra dokununca
+    /// o rakibe özel dashboard (RivalDashboardView) açılır.
     @ViewBuilder
-    private var rivalrySection: some View {
+    private var rivalsSection: some View {
         let rivals = MatchStats(myAppleUserID: myAppleUserID()).rivals(from: matches)
 
         if rivals.isEmpty {
             inviteTeaserCard
-        } else if rivals.count == 1 {
-            rivalryCard(rivals[0])
         } else {
-            rivalrySlider(rivals)
-        }
-    }
-
-    /// Ekran kenarındaki yatay iç boşluk (içerik VStack'inin `.padding(.horizontal)`'ı).
-    private var screenInset: CGFloat { WDSpacing.md }
-    /// Kartın iç içeriği için sabit yükseklik — tüm sayfalar eşit görünsün ve
-    /// "X beraberlik" satırı eklendiğinde içerik kırpılmasın diye.
-    private var rivalryContentHeight: CGFloat { 208 }
-    /// Kart gölgesinin (radius 12) kırpılmadan görünmesi için bırakılan boşluk.
-    private var rivalryShadowPadding: CGFloat { WDSpacing.md }
-
-    /// Yatay, sayfalı rekabet slider'ı. Bir sonraki kartın bir kısmı görünür
-    /// kalır ki kullanıcı kaydırılabileceğini anlasın; gölgelerin kırpılmaması
-    /// için scroll içeriği hem dikey hem yatay yönde nefes payıyla yerleştirilir.
-    private func rivalrySlider(_ rivals: [MatchStats.RivalRecord]) -> some View {
-        // Kartın toplam yüksekliği = iç içerik + .wdCard'ın dikey padding'i (2×lg).
-        let cardHeight = rivalryContentHeight + WDSpacing.lg * 2
-        let active = activeRivalID ?? rivals.first?.id
-
-        return VStack(spacing: WDSpacing.sm) {
-            GeometryReader { geo in
-                // Bir sonraki kartın ucu görünsün diye karta tam genişlikten
-                // biraz dar bir genişlik veriyoruz.
-                let peek = WDSpacing.xl + WDSpacing.sm // ~40pt
-                let cardWidth = max(0, geo.size.width - screenInset * 2 - peek)
-
-                ScrollView(.horizontal) {
-                    HStack(spacing: WDSpacing.md) {
-                        ForEach(rivals) { rival in
-                            rivalryCard(rival, fixedContentHeight: rivalryContentHeight)
-                                .frame(width: cardWidth)
-                        }
-                    }
-                    .scrollTargetLayout()
-                    .padding(.vertical, rivalryShadowPadding)
+            section("Rakiplerin") {
+                ForEach(rivals) { rival in
+                    rivalRow(rival)
                 }
-                .contentMargins(.horizontal, screenInset, for: .scrollContent)
-                .scrollTargetBehavior(.viewAligned)
-                .scrollPosition(id: $activeRivalID, anchor: .leading)
-                .scrollIndicators(.hidden)
             }
-            .frame(height: cardHeight + rivalryShadowPadding * 2)
-            // İçerik VStack'inin yatay padding'ini iptal et: scroll tam ekran
-            // genişliğinde olsun, kenar kartların gölgesi kırpılmasın.
-            .padding(.horizontal, -screenInset)
-
-            rivalryPageDots(rivals: rivals, active: active)
         }
     }
 
-    /// Slider'ın altındaki sayfa noktaları — açık zeminde görünür olsun diye
-    /// TabView'ın varsayılan noktaları yerine token renkleriyle çizilir.
-    private func rivalryPageDots(rivals: [MatchStats.RivalRecord], active: String?) -> some View {
-        HStack(spacing: WDSpacing.xs + 2) {
-            ForEach(rivals) { rival in
-                Circle()
-                    .fill(rival.id == active ? Color.wdAccent : Color.wdInkSecondary.opacity(0.25))
-                    .frame(width: 7, height: 7)
-            }
-        }
-        .animation(.easeInOut(duration: 0.2), value: active)
-        .accessibilityHidden(true)
-    }
-
-    /// Kafa kafaya rekabet kartı: ben vs tek bir rakip, o rakiple galibiyetler.
-    /// `fixedContentHeight` verilirse iç içerik o yüksekliğe sabitlenir (slider'da
-    /// tüm sayfaların eşit görünmesi için).
-    private func rivalryCard(_ rival: MatchStats.RivalRecord, fixedContentHeight: CGFloat? = nil) -> some View {
-        let opponent = rival.opponent
-
-        return VStack(spacing: WDSpacing.md) {
-            Text("Ezeli Rekabet")
-                .font(.wdLabel)
-                .foregroundStyle(Color.wdInkSecondary)
-                .textCase(.uppercase)
-
-            HStack(alignment: .top) {
-                rivalryColumn(
-                    name: me?.displayName ?? "Sen",
-                    colorIndex: me?.avatarColor ?? 0,
-                    wins: rival.wins,
-                    isLeading: rival.wins > rival.losses
+    private func rivalRow(_ rival: MatchStats.RivalRecord) -> some View {
+        NavigationLink {
+            RivalDashboardView(opponent: rival.opponent)
+        } label: {
+            HStack(spacing: WDSpacing.md) {
+                AvatarView(
+                    name: rival.opponent.displayName,
+                    colorIndex: rival.opponent.avatarColor,
+                    size: 44
                 )
-                .frame(maxWidth: .infinity)
 
-                Text("VS")
-                    .font(.system(size: 18, weight: .black, design: .rounded))
-                    .foregroundStyle(Color.wdInkSecondary)
-                    .padding(.top, WDSpacing.md)
-                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(rival.opponent.displayName)
+                        .font(.wdHeadline)
+                        .foregroundStyle(Color.wdInk)
+                    Text(rival.lastPlayed.formatted(date: .abbreviated, time: .omitted))
+                        .font(.wdCaption)
+                        .foregroundStyle(Color.wdInkSecondary)
+                }
 
-                rivalryColumn(
-                    name: opponent.displayName,
-                    colorIndex: opponent.avatarColor,
-                    wins: rival.losses,
-                    isLeading: rival.losses > rival.wins
-                )
-                .frame(maxWidth: .infinity)
-            }
+                Spacer()
 
-            if rival.draws > 0 {
-                Text("\(rival.draws) beraberlik")
-                    .font(.wdCaption)
+                // Kafa kafaya skor: benim galibiyetlerim – rakibin galibiyetleri
+                Text("\(rival.wins) – \(rival.losses)")
+                    .font(.system(.title3, design: .rounded).weight(.bold))
+                    .monospacedDigit()
+                    .foregroundStyle(Color.wdInk)
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(Color.wdInkSecondary)
             }
+            .wdCard()
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: fixedContentHeight)
-        .wdCard(padding: WDSpacing.lg)
-        .accessibilityElement(children: .combine)
+        .buttonStyle(WDPressableButtonStyle())
         .accessibilityLabel(
-            "Rekabet: \(me?.displayName ?? "Sen") \(rival.wins) galibiyet, \(opponent.displayName) \(rival.losses) galibiyet, \(rival.draws) beraberlik"
+            "\(rival.opponent.displayName): \(rival.wins) galibiyet, \(rival.losses) mağlubiyet, \(rival.draws) beraberlik. Detay için dokun."
         )
-    }
-
-    private func rivalryColumn(name: String, colorIndex: Int, wins: Int, isLeading: Bool) -> some View {
-        VStack(spacing: WDSpacing.sm) {
-            AvatarView(name: name, colorIndex: colorIndex, size: 64, isHighlighted: isLeading)
-            Text(name)
-                .font(.wdHeadline)
-                .foregroundStyle(Color.wdInk)
-                .lineLimit(1)
-            Text("\(wins)")
-                .font(.system(size: 32, weight: .heavy, design: .rounded))
-                .foregroundStyle(isLeading ? Color.wdAccent : Color.wdInk)
-                .contentTransition(.numericText())
-        }
     }
 
     /// Henüz rakip yokken gösterilen davet kartı.
