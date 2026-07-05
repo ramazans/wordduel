@@ -2,6 +2,18 @@ import Foundation
 import CoreModels
 import MatchEngine
 
+/// Soranın seçtiği soru: içerik + tür + cevap formatı. Çoktan seçmelide
+/// şıklar soran cihazda bir kez üretilir ve Round'a yazılır — CloudKit
+/// senkronuyla iki cihaz da aynı sırada aynı şıkları görür.
+struct AskRequest: Sendable {
+    var word: String
+    var expectedAnswer: String
+    var kind: ContentKind = .word
+    var format: AnswerFormat = .text
+    /// `.text` için boş; `.multipleChoice` için 4 karışık şık.
+    var options: [String] = []
+}
+
 /// Kalıcı `Match`/`Round` modeli üzerinde MatchEngine kurallarını uygulayan akış
 /// katmanı. Saf durum makinesi (`MatchEngine` aktörü) test edilebilir referans;
 /// burada aynı kurallar SwiftData'da yaşayan duruma uygulanır ki CloudKit her iki
@@ -97,19 +109,29 @@ struct MatchFlow {
 
     // MARK: - Geçişler
 
-    func askWord(_ word: String, expectedAnswer: String, asker: AskerRole) {
+    func askWord(_ request: AskRequest, asker: AskerRole) {
         guard case .picking(let expected) = phase, expected == asker else { return }
         let round = Round(
             index: match.currentRoundIndex,
             askerRole: asker,
-            word: word,
-            expectedAnswer: expectedAnswer
+            word: request.word,
+            expectedAnswer: request.expectedAnswer,
+            kind: request.kind,
+            format: request.format,
+            options: request.options
         )
         round.startedAt = .now
         match.rounds = rounds + [round]
     }
 
-    func askRepeat(_ item: PendingRepeatItem, asker: AskerRole) {
+    /// Tekrar sorusu. Format yeniden sorarken seçilir; şıklar taze üretilip
+    /// verilir — kuyrukta saklanmaz (cevaplayan şık pozisyonu ezberleyemez).
+    func askRepeat(
+        _ item: PendingRepeatItem,
+        format: AnswerFormat = .text,
+        options: [String] = [],
+        asker: AskerRole
+    ) {
         guard case .picking(let expected) = phase, expected == asker else { return }
         let round = Round(
             index: match.currentRoundIndex,
@@ -117,14 +139,18 @@ struct MatchFlow {
             word: item.word,
             expectedAnswer: item.expectedAnswer,
             isRepeat: true,
-            originRoundIndex: originRound(forWord: item.word)?.index
+            originRoundIndex: originRound(forWord: item.word)?.index,
+            kind: item.kind,
+            format: format,
+            options: options
         )
         round.startedAt = .now
         match.rounds = rounds + [round]
     }
 
     /// Cevabı işler. Boş cevap = süre doldu / bilmiyorum → yanlış.
-    /// Otomatik karar verilemiyorsa tur asker'in değerlendirmesine kalır.
+    /// Çoktan seçmelide şık dokunuşu kesin karardır (manuel inceleme yok);
+    /// serbest metinde otomatik karar verilemiyorsa tur asker'e kalır.
     func submitAnswer(_ answer: String) {
         guard let round = currentRound,
               round.judgement == .pendingReview,
@@ -137,6 +163,15 @@ struct MatchFlow {
         }
 
         round.answerGiven = trimmed
+
+        if round.format == .multipleChoice {
+            // MatchEngine.submitAnswer ile birebir: şıkta yazım hatası olmaz.
+            let isCorrect = AnswerNormalizer.normalize(trimmed)
+                == AnswerNormalizer.normalize(round.expectedAnswer)
+            resolve(round, isCorrect: isCorrect)
+            return
+        }
+
         switch AnswerNormalizer.autoJudge(answer: trimmed, expected: round.expectedAnswer) {
         case .correct:
             resolve(round, isCorrect: true)
@@ -186,7 +221,8 @@ struct MatchFlow {
                         word: round.word,
                         expectedAnswer: round.expectedAnswer,
                         dueAtRoundIndex: match.currentRoundIndex + match.repeatInterval,
-                        weight: weight + 1
+                        weight: weight + 1,
+                        kindRaw: round.kindRaw
                     )
                 )
             }

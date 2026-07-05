@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   match-engine-tests:
-    name: MatchEngine (Linux)
+    name: Swift Packages (Linux)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +24,9 @@ jobs:
           swift-version: "6.0"
       - name: Run MatchEngine tests
         working-directory: Packages/MatchEngine
+        run: swift test --parallel
+      - name: Run WordRepository tests
+        working-directory: Packages/WordRepository
         run: swift test --parallel
 
   ios-build:

@@ -51,15 +51,36 @@ public enum AnswerNormalizer {
         case needsManualReview
     }
 
+    /// Beklenen cevabın eş anlamlı varyantları: "," ve ";" ile bölünmüş
+    /// parçalar + tam string. "vazgeçmek, bırakmak" → ["vazgeçmek, bırakmak",
+    /// "vazgeçmek", "bırakmak"]. Tek parçalıysa yalnızca tam string döner.
+    public static func expectedVariants(_ expected: String) -> [String] {
+        let full = expected.trimmingCharacters(in: .whitespacesAndNewlines)
+        var variants: [String] = full.isEmpty ? [] : [full]
+        let parts = expected
+            .components(separatedBy: CharacterSet(charactersIn: ",;"))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        for part in parts where !variants.contains(part) {
+            variants.append(part)
+        }
+        return variants
+    }
+
+    /// Beklenen cevap virgül/noktalı virgülle ayrılmış eş anlamlılar içerebilir;
+    /// herhangi bir varyant kendi uzunluk toleransı içinde eşleşirse doğru sayılır.
+    /// Hiçbiri eşleşmezse (boş cevap hariç) manuel incelemeye düşer — boş olmayan
+    /// bir cevap asla otomatik yanlış sayılmaz.
     public static func autoJudge(answer: String, expected: String) -> AutoVerdict {
         let a = normalize(answer)
-        let e = normalize(expected)
         if a.isEmpty { return .wrong }
-        if a == e { return .correct }
-        let allowed = tolerance(for: e.count)
-        if allowed == 0 { return .needsManualReview }
-        let distance = levenshtein(a, e)
-        if distance <= allowed { return .correct }
+
+        for variant in expectedVariants(expected) {
+            let e = normalize(variant)
+            if a == e { return .correct }
+            let allowed = tolerance(for: e.count)
+            if allowed > 0, levenshtein(a, e) <= allowed { return .correct }
+        }
         return .needsManualReview
     }
 }

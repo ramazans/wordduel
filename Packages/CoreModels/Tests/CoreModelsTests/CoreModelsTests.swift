@@ -14,6 +14,43 @@ final class CoreModelsTests: XCTestCase {
         XCTAssertEqual(decoded, [item])
     }
 
+    /// Eski istemcilerin yazdığı `kindRaw`sız JSON hâlâ decode edilebilmeli.
+    func testPendingRepeatItemDecodesLegacyJSONWithoutKind() throws {
+        let legacy = Data("""
+        [{"word":"give up","expectedAnswer":"vazgeçmek","dueAtRoundIndex":4,"weight":2}]
+        """.utf8)
+        let decoded = try JSONDecoder().decode([PendingRepeatItem].self, from: legacy)
+        XCTAssertEqual(decoded.count, 1)
+        XCTAssertEqual(decoded[0].kind, .word)
+        XCTAssertEqual(decoded[0].word, "give up")
+    }
+
+    func testPendingRepeatItemKindRoundTrip() throws {
+        let item = PendingRepeatItem(
+            word: "break the ice",
+            expectedAnswer: "buzları eritmek",
+            dueAtRoundIndex: 7,
+            weight: 1,
+            kindRaw: ContentKind.idiom.rawValue
+        )
+        let data = try JSONEncoder().encode(item)
+        let decoded = try JSONDecoder().decode(PendingRepeatItem.self, from: data)
+        XCTAssertEqual(decoded, item)
+        XCTAssertEqual(decoded.kind, .idiom)
+    }
+
+    /// Eski snapshot'lardaki RoundSnapshot yeni anahtarlar olmadan decode edilir.
+    func testRoundSnapshotDecodesLegacyJSONWithoutNewFields() throws {
+        let legacy = Data("""
+        {"index":0,"askerRoleRaw":"host","word":"abundant","expectedAnswer":"bol",
+         "judgementRaw":"correct","pointsAwarded":0,"isRepeat":false}
+        """.utf8)
+        let decoded = try JSONDecoder().decode(MatchStateSnapshot.RoundSnapshot.self, from: legacy)
+        XCTAssertNil(decoded.kindRaw)
+        XCTAssertNil(decoded.formatRaw)
+        XCTAssertNil(decoded.options)
+    }
+
     func testMatchStatusEnum() {
         XCTAssertEqual(MatchStatus.allCases.count, 3)
     }

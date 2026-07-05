@@ -8,10 +8,12 @@ struct AskingView: View {
     var roundNumber: Int = 1
     var totalRounds: Int = 10
     var dueRepeats: [PendingRepeatItem] = []
-    var onAsk: (_ word: String, _ expectedAnswer: String) -> Void = { _, _ in }
-    var onAskRepeat: (PendingRepeatItem) -> Void = { _ in }
+    var onAsk: (AskRequest) -> Void = { _ in }
+    var onAskRepeat: (_ item: PendingRepeatItem, _ format: AnswerFormat, _ options: [String]) -> Void = { _, _, _ in }
 
     @State private var mode: AskMode = .list
+    @State private var format: AnswerFormat = .text
+    @State private var selectedKind: SeedKind = .word
     @State private var searchText: String = ""
     @State private var selectedLevel: String?
     @State private var words: [SeedWord] = []
@@ -46,6 +48,8 @@ struct AskingView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal)
 
+            formatPicker
+
             switch mode {
             case .list:
                 listMode
@@ -62,18 +66,32 @@ struct AskingView: View {
             isPresented: askConfirmBinding,
             titleVisibility: .visible
         ) {
-            Button("Bu kelimeyi sor") {
+            Button("Bunu sor") {
                 if let word = pendingWord {
-                    onAsk(word.text, word.definition)
+                    onAsk(makeRequest(for: word))
                 }
                 pendingWord = nil
             }
             Button("Vazgeç", role: .cancel) { pendingWord = nil }
         } message: {
             if let word = pendingWord {
-                Text("Beklenen cevap: \(word.definition)")
+                Text("Beklenen cevap: \(word.definition) • Format: \(formatLabel)")
             }
         }
+    }
+
+    /// Cevap formatı seçici: rakip yazarak mı cevaplasın, şıklardan mı seçsin?
+    private var formatPicker: some View {
+        Picker("Cevap formatı", selection: $format) {
+            Text("Yazarak").tag(AnswerFormat.text)
+            Text("Test (4 seçenek)").tag(AnswerFormat.multipleChoice)
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal)
+    }
+
+    private var formatLabel: String {
+        format == .multipleChoice ? "Test (4 seçenek)" : "Yazarak"
     }
 
     // MARK: - Tekrar kuyruğu
@@ -103,14 +121,15 @@ struct AskingView: View {
         ) {
             Button("Tekrar sor") {
                 if let item = pendingRepeat {
-                    onAskRepeat(item)
+                    let (effectiveFormat, options) = repeatFormatAndOptions(for: item)
+                    onAskRepeat(item, effectiveFormat, options)
                 }
                 pendingRepeat = nil
             }
             Button("Vazgeç", role: .cancel) { pendingRepeat = nil }
         } message: {
             if let item = pendingRepeat {
-                Text("Yine bilemezse +\(Scoring.points(forWeight: item.weight)) puan kazanırsın.")
+                Text("Yine bilemezse +\(Scoring.points(forWeight: item.weight)) puan kazanırsın. • Format: \(formatLabel)")
             }
         }
     }
@@ -155,6 +174,7 @@ struct AskingView: View {
 
     private var listMode: some View {
         VStack(spacing: WDSpacing.sm) {
+            kindPicker
             searchField
             levelChips
 
@@ -176,6 +196,23 @@ struct AskingView: View {
                     .padding(.horizontal)
                     .padding(.bottom, WDSpacing.md)
                 }
+            }
+        }
+    }
+
+    /// İçerik türü sekmeleri: Kelime / Deyim / Phrasal Verb.
+    private var kindPicker: some View {
+        Picker("İçerik türü", selection: $selectedKind) {
+            Text("Kelime").tag(SeedKind.word)
+            Text("Deyim").tag(SeedKind.idiom)
+            Text("Phrasal Verb").tag(SeedKind.phrasal)
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal)
+        .onChange(of: selectedKind) {
+            // Seçili seviye yeni türde yoksa filtreyi sıfırla.
+            if let level = selectedLevel, !availableLevels.contains(level) {
+                selectedLevel = nil
             }
         }
     }
@@ -276,10 +313,7 @@ struct AskingView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             PrimaryButton("Sor", systemImage: "paperplane.fill") {
-                onAsk(
-                    customWord.trimmingCharacters(in: .whitespaces),
-                    customAnswer.trimmingCharacters(in: .whitespaces)
-                )
+                onAsk(makeCustomRequest())
             }
             .disabled(
                 customWord.trimmingCharacters(in: .whitespaces).isEmpty ||
@@ -313,17 +347,77 @@ struct AskingView: View {
     }
 
     private var availableLevels: [String] {
-        Array(Set(words.map(\.level))).sorted()
+        Array(Set(words.filter { $0.kind == selectedKind }.map(\.level))).sorted()
     }
 
     private var filteredWords: [SeedWord] {
         words.filter { word in
+            let kindMatches = word.kind == selectedKind
             let levelMatches = selectedLevel == nil || word.level == selectedLevel
             let searchMatches = searchText.isEmpty
                 || word.text.localizedCaseInsensitiveContains(searchText)
                 || word.definition.localizedCaseInsensitiveContains(searchText)
-            return levelMatches && searchMatches
+            return kindMatches && levelMatches && searchMatches
         }
+    }
+
+    // MARK: - Soru kurma
+
+    /// Listeden seçilen giriş için soru: Test formatında şıklar burada, soran
+    /// cihazda bir kez üretilir (Round'a yazılıp senkronla taşınır).
+    private func makeRequest(for word: SeedWord) -> AskRequest {
+        let (effectiveFormat, options) = formatAndOptions(
+            correct: word.definition,
+            kind: word.kind,
+            level: word.level
+        )
+        return AskRequest(
+            word: word.text,
+            expectedAnswer: word.definition,
+            kind: ContentKind(rawValue: word.kind.rawValue) ?? .word,
+            format: effectiveFormat,
+            options: options
+        )
+    }
+
+    /// Kendin-yaz sorusu hep kelime türünde; Test seçiliyse çeldiriciler
+    /// kelime havuzundan gelir, havuz yoksa sessizce yazma formatına düşer.
+    private func makeCustomRequest() -> AskRequest {
+        let answer = customAnswer.trimmingCharacters(in: .whitespaces)
+        let (effectiveFormat, options) = formatAndOptions(
+            correct: answer,
+            kind: .word,
+            level: nil
+        )
+        return AskRequest(
+            word: customWord.trimmingCharacters(in: .whitespaces),
+            expectedAnswer: answer,
+            kind: .word,
+            format: effectiveFormat,
+            options: options
+        )
+    }
+
+    private func repeatFormatAndOptions(for item: PendingRepeatItem) -> (AnswerFormat, [String]) {
+        formatAndOptions(
+            correct: item.expectedAnswer,
+            kind: SeedKind(rawValue: item.kind.rawValue) ?? .word,
+            level: nil
+        )
+    }
+
+    /// Test formatı ancak 4 şık üretilebiliyorsa kullanılır; havuz yetersizse
+    /// (ör. seed yüklenemedi) yazma formatına düşer.
+    private func formatAndOptions(correct: String, kind: SeedKind, level: String?) -> (AnswerFormat, [String]) {
+        guard format == .multipleChoice else { return (.text, []) }
+        let options = OptionsBuilder.multipleChoiceOptions(
+            correct: correct,
+            kind: kind,
+            level: level,
+            pool: words
+        )
+        guard options.count >= 4 else { return (.text, []) }
+        return (.multipleChoice, options)
     }
 
     private func levelColor(_ level: String) -> Color {
