@@ -2,39 +2,16 @@ default_platform(:ios)
 
 # WordDuel TestFlight dağıtımı.
 #
-# Kimlik doğrulama App Store Connect API anahtarı ile yapılır (Apple ID / parola yok).
-# İmzalama: kalıcı bir Apple Distribution sertifikası (.p12) GitHub Secrets'tan
-# runner'daki geçici keychain'e import edilir; provisioning profile'lar ise
-# `-allowProvisioningUpdates` + API anahtarı ile otomatik indirilir/üretilir.
-#
-# NEDEN kalıcı sertifika: CI runner'ları her koşuda boş keychain ile başlar.
-# Sertifika da otomatik üretilseydi (eski davranış) her koşuda yeni sertifika
-# yaratılır, private key runner ile birlikte kaybolur ve hesap kısa sürede
-# sertifika limitine çarpar ("Your account has reached the maximum number of
-# certificates"). Kalıcı .p12 bu döngüyü kırar; profil üretiminin limiti yoktur.
+# Kimlik doğrulama ve imzalama tamamen App Store Connect API anahtarı ile yapılır
+# (Apple ID / parola yok). xcodebuild "automatic signing" + `-allowProvisioningUpdates`
+# sayesinde dağıtım sertifikası ve provisioning profile bulutta otomatik üretilir.
 #
 # Gerekli ortam değişkenleri (CI'da GitHub Secrets'tan gelir):
-#   ASC_KEY_ID          App Store Connect API Key ID
-#   ASC_ISSUER_ID       App Store Connect Issuer ID
-#   ASC_KEY_PATH        .p8 anahtar dosyasının yolu (workflow decode eder)
-#   APPLE_TEAM_ID       10 karakterlik Apple Developer Team ID
-#   BUILD_NUMBER        Benzersiz build numarası (her yükleme için artmalı)
-#   DIST_CERT_P12_PATH  Apple Distribution sertifikası .p12 dosyasının yolu
-#                       (workflow DIST_CERT_P12 secret'ını decode eder; yerelde
-#                       boş bırakılabilir — kendi keychain'indeki sertifika kullanılır)
-#   DIST_CERT_PASSWORD  .p12 dosyasının parolası
-#
-# Tek seferlik kurulum (yerel Mac'te):
-#   1. developer.apple.com → Certificates: eski CI koşularının yarattığı, private
-#      key'i kayıp sertifikaları revoke et (limit bu yüzden doldu; bu sertifikalar
-#      zaten kullanılamaz durumda, revoke etmek güvenlidir).
-#   2. Xcode → Settings → Accounts → Manage Certificates → + → Apple Distribution
-#      ile TEK bir dağıtım sertifikası oluştur.
-#   3. Keychain Access'te sertifikayı private key'iyle birlikte seçip .p12 olarak
-#      (parola koyarak) dışa aktar.
-#   4. GitHub repo → Settings → Secrets:
-#        DIST_CERT_P12      = `base64 -i WordDuelDist.p12` çıktısı
-#        DIST_CERT_PASSWORD = .p12 parolası
+#   ASC_KEY_ID        App Store Connect API Key ID
+#   ASC_ISSUER_ID     App Store Connect Issuer ID
+#   ASC_KEY_PATH      .p8 anahtar dosyasının yolu (workflow decode eder)
+#   APPLE_TEAM_ID     10 karakterlik Apple Developer Team ID
+#   BUILD_NUMBER      Benzersiz build numarası (her yükleme için artmalı)
 
 platform :ios do
   desc "Build ve TestFlight'a yükle"
@@ -55,29 +32,6 @@ platform :ios do
       in_house: false
     )
 
-    # CI'da geçici, parolasız bir keychain oluşturur ve default yapar
-    # (keychain adı: fastlane_tmp_keychain).
-    setup_ci if ENV["CI"]
-
-    # Kalıcı dağıtım sertifikasını keychain'e yükle ki xcodebuild yeni sertifika
-    # yaratmaya çalışmasın. Yerel koşuda DIST_CERT_P12_PATH boşsa atlanır.
-    dist_cert_path = ENV["DIST_CERT_P12_PATH"]
-    if dist_cert_path && !dist_cert_path.empty?
-      import_certificate(
-        certificate_path: dist_cert_path,
-        certificate_password: ENV["DIST_CERT_PASSWORD"].to_s,
-        keychain_name: "fastlane_tmp_keychain",
-        keychain_password: ""
-      )
-    end
-
-    auth_xcargs = [
-      "-allowProvisioningUpdates",
-      "-authenticationKeyPath #{key_path}",
-      "-authenticationKeyID #{key_id}",
-      "-authenticationKeyIssuerID #{issuer_id}"
-    ]
-
     build_app(
       project: "WordDuel.xcodeproj",
       scheme: "WordDuel",
@@ -85,18 +39,14 @@ platform :ios do
       export_method: "app-store",
       output_directory: "build",
       output_name: "WordDuel.ipa",
-      xcargs: ([
+      xcargs: [
         "DEVELOPMENT_TEAM=#{team_id}",
         "CURRENT_PROJECT_VERSION=#{build_number}",
-        # Arşivi doğrudan dağıtım kimliğiyle imzala; aksi halde xcodebuild arşiv
-        # adımı için ayrıca Apple Development sertifikası + profili ister
-        # ("No profiles for 'club.kadro.wordduel' were found ... iOS App
-        # Development" hatasının kaynağı buydu).
-        "CODE_SIGN_IDENTITY=\"Apple Distribution\""
-      ] + auth_xcargs).join(" "),
-      # exportArchive adımı da profil indirebilsin diye aynı API anahtarı
-      # argümanları export'a da geçilir.
-      export_xcargs: auth_xcargs.join(" "),
+        "-allowProvisioningUpdates",
+        "-authenticationKeyPath #{key_path}",
+        "-authenticationKeyID #{key_id}",
+        "-authenticationKeyIssuerID #{issuer_id}"
+      ].join(" "),
       export_options: {
         method: "app-store",
         teamID: team_id,

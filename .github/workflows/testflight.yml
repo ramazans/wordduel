@@ -47,27 +47,12 @@ jobs:
         run: |
           echo "$ASC_KEY_P8" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
 
-      # Kalıcı Apple Distribution sertifikası — her koşuda yeni sertifika
-      # üretilmesini (ve hesabın sertifika limitine çarpmasını) önler.
-      # Kurulum adımları için bkz. fastlane/Fastfile başındaki yorum.
-      - name: Decode distribution certificate
-        env:
-          DIST_CERT_P12: ${{ secrets.DIST_CERT_P12 }}
-        run: |
-          if [ -z "$DIST_CERT_P12" ]; then
-            echo "::error::DIST_CERT_P12 secret'ı tanımlı değil — kurulum için fastlane/Fastfile başındaki yorumu izleyin"
-            exit 1
-          fi
-          echo "$DIST_CERT_P12" | base64 --decode > "$RUNNER_TEMP/dist.p12"
-
       - name: Build & upload to TestFlight
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          DIST_CERT_P12_PATH: ${{ runner.temp }}/dist.p12
-          DIST_CERT_PASSWORD: ${{ secrets.DIST_CERT_PASSWORD }}
           BUILD_NUMBER: ${{ github.event.inputs.build_number || github.run_number }}
         run: bundle exec fastlane beta
 
