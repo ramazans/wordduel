@@ -85,15 +85,20 @@ platform :ios do
       export_method: "app-store",
       output_directory: "build",
       output_name: "WordDuel.ipa",
-      # CODE_SIGN_IDENTITY burada YOK: komut satırından geçilirse xcodebuild
-      # derlenen HER hedefe uygular (SwiftPM'in WordRepository için ürettiği
-      # otomatik kaynak paketi hedefi dahil), bu da o hedefin kendi Automatic
-      # imzalama stiliyle çakışıp "conflicting provisioning settings" hatası
-      # verir. Bunun yerine yalnızca WordDuel hedefinin Release ayarlarında
-      # (project.yml) tanımlı — sadece o hedefe uygulanır.
+      # CODE_SIGN_STYLE'ı Manual'a çekiyoruz: Xcode 14+'ta bilinen bir davranış
+      # olarak, CODE_SIGN_STYLE=Automatic ile birlikte HERHANGİ bir hedefin
+      # (proje dosyasına gömülü veya komut satırından, fark etmiyor) build
+      # setting'lerinde açıkça CODE_SIGN_IDENTITY bulunması "conflicting
+      # provisioning settings" hatası veriyor — bunu hem WordDuel hem de
+      # SwiftPM'in WordRepository için ürettiği otomatik kaynak paketi
+      # hedefinde (WordRepository_WordRepository) ayrı ayrı yaşadık. Manual +
+      # açık kimlik geçerli bir kombinasyon; -allowProvisioningUpdates Manual
+      # stilde de eksik profilleri indirmeye devam ediyor.
       xcargs: ([
         "DEVELOPMENT_TEAM=#{team_id}",
-        "CURRENT_PROJECT_VERSION=#{build_number}"
+        "CURRENT_PROJECT_VERSION=#{build_number}",
+        "CODE_SIGN_STYLE=Manual",
+        "CODE_SIGN_IDENTITY=\"Apple Distribution\""
       ] + auth_xcargs).join(" "),
       # exportArchive adımı da profil indirebilsin diye aynı API anahtarı
       # argümanları export'a da geçilir.
