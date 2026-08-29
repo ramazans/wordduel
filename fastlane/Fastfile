@@ -3,9 +3,16 @@ default_platform(:ios)
 # WordDuel TestFlight dağıtımı.
 #
 # Kimlik doğrulama App Store Connect API anahtarı ile yapılır (Apple ID / parola yok).
-# İmzalama: kalıcı bir Apple Distribution sertifikası (.p12) GitHub Secrets'tan
-# runner'daki geçici keychain'e import edilir; provisioning profile'lar ise
-# `-allowProvisioningUpdates` + API anahtarı ile otomatik indirilir/üretilir.
+# İmzalama MANUEL stildedir (CODE_SIGN_STYLE=Manual):
+#   - Sertifika: kalıcı bir Apple Distribution sertifikası (.p12) GitHub
+#     Secrets'tan runner'daki geçici keychain'e import edilir.
+#   - Profil: App Store dağıtım profili `get_provisioning_profile` (sigh) ile
+#     API anahtarı üzerinden fetch/create edilip adı build'e verilir.
+# Otomatik imzalama BİLİNÇLİ olarak kullanılmıyor: Xcode 14+'ta, SwiftPM
+# kaynak paketi (WordRepository) içeren projelerde Automatic stil + açık
+# CODE_SIGN_IDENTITY kombinasyonu "conflicting provisioning settings"
+# hatası veriyor; ayrıca Automatic stil CI'da yeni sertifika üretmeye
+# çalışıp hesabın sertifika limitini doldurabiliyor.
 #
 # NEDEN kalıcı sertifika: CI runner'ları her koşuda boş keychain ile başlar.
 # Sertifika da otomatik üretilseydi (eski davranış) her koşuda yeni sertifika
@@ -43,6 +50,7 @@ platform :ios do
     issuer_id = ENV.fetch("ASC_ISSUER_ID")
     key_path  = ENV.fetch("ASC_KEY_PATH")
     team_id   = ENV.fetch("APPLE_TEAM_ID")
+    app_identifier = "club.kadro.wordduel"
     # CI BUILD_NUMBER'ı set eder; yerel çalıştırmada zaman damgası kullanılır
     # (TestFlight her yükleme için benzersiz, artan bir build numarası ister).
     build_number = ENV["BUILD_NUMBER"]
@@ -71,6 +79,20 @@ platform :ios do
       )
     end
 
+    # Manual imzalamada xcodebuild profili KENDİ BAŞINA üretmez
+    # (-allowProvisioningUpdates yalnızca var olanı indirir), bu yüzden App
+    # Store dağıtım profilini burada açıkça fetch/create edip adını
+    # PROVISIONING_PROFILE_SPECIFIER olarak veriyoruz. sigh yalnızca profil
+    # üretir, sertifika üretmez — kalıcı .p12 akışıyla çakışmaz.
+    get_provisioning_profile(
+      api_key: api_key,
+      app_identifier: app_identifier,
+      # App Store profili (development/adhoc değil)
+      readonly: false
+    )
+    profile_name = lane_context[SharedValues::SIGH_NAME]
+    UI.user_error!("Provisioning profile adı alınamadı (SIGH_NAME boş)") if profile_name.to_s.empty?
+
     auth_xcargs = [
       "-allowProvisioningUpdates",
       "-authenticationKeyPath #{key_path}",
@@ -91,14 +113,14 @@ platform :ios do
       # setting'lerinde açıkça CODE_SIGN_IDENTITY bulunması "conflicting
       # provisioning settings" hatası veriyor — bunu hem WordDuel hem de
       # SwiftPM'in WordRepository için ürettiği otomatik kaynak paketi
-      # hedefinde (WordRepository_WordRepository) ayrı ayrı yaşadık. Manual +
-      # açık kimlik geçerli bir kombinasyon; -allowProvisioningUpdates Manual
-      # stilde de eksik profilleri indirmeye devam ediyor.
+      # hedefinde (WordRepository_WordRepository) ayrı ayrı yaşadık.
+      # Manual stil, kimliğin yanında profilin de açıkça verilmesini ister.
       xcargs: ([
         "DEVELOPMENT_TEAM=#{team_id}",
         "CURRENT_PROJECT_VERSION=#{build_number}",
         "CODE_SIGN_STYLE=Manual",
-        "CODE_SIGN_IDENTITY=\"Apple Distribution\""
+        "CODE_SIGN_IDENTITY=\"Apple Distribution\"",
+        "PROVISIONING_PROFILE_SPECIFIER=\"#{profile_name}\""
       ] + auth_xcargs).join(" "),
       # exportArchive adımı da profil indirebilsin diye aynı API anahtarı
       # argümanları export'a da geçilir.
@@ -106,7 +128,12 @@ platform :ios do
       export_options: {
         method: "app-store",
         teamID: team_id,
-        signingStyle: "automatic"
+        # Arşiv manuel imzalandığı için export da manuel olmalı; aksi halde
+        # exportArchive kendi profil seçimini yapmaya çalışır.
+        signingStyle: "manual",
+        provisioningProfiles: {
+          app_identifier => profile_name
+        }
       }
     )
 
