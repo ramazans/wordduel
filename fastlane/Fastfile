@@ -85,14 +85,15 @@ platform :ios do
       export_method: "app-store",
       output_directory: "build",
       output_name: "WordDuel.ipa",
+      # CODE_SIGN_IDENTITY burada YOK: komut satırından geçilirse xcodebuild
+      # derlenen HER hedefe uygular (SwiftPM'in WordRepository için ürettiği
+      # otomatik kaynak paketi hedefi dahil), bu da o hedefin kendi Automatic
+      # imzalama stiliyle çakışıp "conflicting provisioning settings" hatası
+      # verir. Bunun yerine yalnızca WordDuel hedefinin Release ayarlarında
+      # (project.yml) tanımlı — sadece o hedefe uygulanır.
       xcargs: ([
         "DEVELOPMENT_TEAM=#{team_id}",
-        "CURRENT_PROJECT_VERSION=#{build_number}",
-        # Arşivi doğrudan dağıtım kimliğiyle imzala; aksi halde xcodebuild arşiv
-        # adımı için ayrıca Apple Development sertifikası + profili ister
-        # ("No profiles for 'club.kadro.wordduel' were found ... iOS App
-        # Development" hatasının kaynağı buydu).
-        "CODE_SIGN_IDENTITY=\"Apple Distribution\""
+        "CURRENT_PROJECT_VERSION=#{build_number}"
       ] + auth_xcargs).join(" "),
       # exportArchive adımı da profil indirebilsin diye aynı API anahtarı
       # argümanları export'a da geçilir.
